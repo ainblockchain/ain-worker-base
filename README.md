@@ -1,7 +1,7 @@
-<h1 align="center">AIN Connect Worker BASE</h1>
+<h1 align="center">AIN Connect Worker Base</h1>
 <h4 align="center">AIN Connect 와 연결하여 HW 생태계를 만들어주는 프로젝트이다.</h4>
                                                                                                 
-**LG Worker** 프로젝트는 Node.js로 작성되었습니다.
+**AIN Worker** 프로젝트는 Node.js로 작성되었습니다.
 
 <br>
 

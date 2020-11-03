@@ -125,3 +125,4 @@ squad*
 # nodejs specific
 node_modules
 sockets
+config.yaml
