@@ -6,7 +6,7 @@ export default class Template {
    * @params name: Namespace Name.
    * @params labels.
   */
-  static getNamespace(name: string, labels: {[key: string]: string}) {
+  static getNamespace(name: string, labels?: {[key: string]: string}) {
     const templateJson = {
       apiVersion: 'v1',
       kind: 'Namespace',
@@ -87,8 +87,8 @@ export default class Template {
       });
     }
 
-    if (config.storageSpecs) {
-      for (const [storageId, storageSpec] of Object.entries(config.storageSpecs)) {
+    if (config.storageSpec) {
+      for (const [storageId, storageSpec] of Object.entries(config.storageSpec)) {
         templateJson.spec.template.spec.volumes.push({
           name: storageId,
           persistentVolumeClaim: { claimName: storageId },
@@ -171,7 +171,7 @@ export default class Template {
         name,
         namespace,
         labels: {
-          ...labels, app: name, templateVersion: '3',
+          ...labels, app: serviceName, templateVersion: '3',
         },
       },
       spec: {
@@ -249,9 +249,12 @@ export default class Template {
       spec: {
         accessModes: [config.accessModes],
         resources: { requests: { storage: `${config.capacity}Gi` } },
-        storageClassName: config.storageClassName,
       },
     };
+
+    if (config.storageClassName !== '') {
+      templateJson.spec['storageClassName'] = config.storageClassName;
+    }
 
     return templateJson;
   }

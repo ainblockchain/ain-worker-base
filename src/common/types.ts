@@ -2,6 +2,18 @@ import * as k8s from '@kubernetes/client-node';
 
 export type NODE_ENV = 'prod' | 'staging';
 
+export type ClusterType = 'aws' | 'gcp' | 'azure' | 'on-premise';
+
+export type WorkerInfo = {
+  clusterName: string; // Unique!
+  mnemonic: string;
+  dockerAuth?: {
+    username: string;
+    password: string;
+    server: string; // Reposity Address
+  };
+}
+
 // k8s
 export type K8sResourceType = 'namespace' | 'deployment' | 'service' | 'virtualService' | 'storage' | 'persistentVolumeClaim' | 'persistentVolume';
 
@@ -85,7 +97,7 @@ export type ContainerSpec = {
   ports?: number[], // Internal Port List
 }
 
-export type StorageSpecs = {
+export type StorageSpec = {
   [storageId: string]: {
     mountPath: string, // to Container
   }
@@ -98,7 +110,7 @@ export type SecretSpecs = {
 }
 
 /**
- * @params storageSpecs: Storage Info for mounting storage to Container.
+ * @params storageSpec: Storage Info for mounting storage to Container.
  * @params secretSpec: Secret Info for mounting storage to Container.
  * @params imagePullSecretName: Secret Name about private Docker registry.
  * @params labels: deploy,pod labels
@@ -107,7 +119,7 @@ export type SecretSpecs = {
  * @params privileged: root authority.
 */
 export type DeploymentCreateConfig = {
-  storageSpecs?: StorageSpecs;
+  storageSpec?: StorageSpec;
   secretSpec?: SecretSpecs
   imagePullSecretName?: string;
   labels?: {[key: string]: string},
@@ -116,12 +128,17 @@ export type DeploymentCreateConfig = {
   privileged?: boolean;
 }
 
+export type HwStatus = {
+  capacity: HwSpec;
+  allocatable: HwSpec;
+};
+
 export type NodePool = {
   [nodePoolName: string]: {
     gpuType: string,
     osImage: string,
     nodes: {
-      [nodeId: string]: HwSpec
+      [nodeId: string]: HwStatus
     }
   }
 };
@@ -135,11 +152,20 @@ export type NodePool = {
 export type StorageStatus = 'Available' | 'Bound' | 'Released' | 'Failed';
 
 export type StorageInfo = {
-  storageId: string,
+  appName: string,
   status: StorageStatus,
   labels: {[key: string]: string},
   claim?: {
     name: string,
     namespaceId: string,
   },
+}
+
+export type NetworkConfig = {
+  ipConfig?: {
+    ipBlock: string,
+    cidr: string[]
+  },
+  podLabel?: { [key: string]: string },
+  namespaceSelector?: { [key: string]: string },
 }

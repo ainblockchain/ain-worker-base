@@ -66,8 +66,8 @@ export default class Api {
   */
   convertToUnit(hwSpec: types.HwK8sSpec) {
     return {
-      cpu: this.convertK8sUnitCpu(hwSpec.cpu),
-      memory: this.convertK8sUnitMemory(hwSpec.memory),
+      cpu: (hwSpec.cpu) ? this.convertK8sUnitCpu(hwSpec.cpu) : 0,
+      memory: (hwSpec.memory) ? this.convertK8sUnitMemory(hwSpec.memory) : 0,
       gpu: Number(hwSpec['nvidia.com/gpu']) || 0,
     };
   }
@@ -120,13 +120,14 @@ export default class Api {
       ports: [2049, 111, 20048],
       resourceLimits: this.convertToK8sUnit(resourceLimits),
     }, {
-      storageSpecs: {
+      storageSpec: {
         [nfsName]: {
           mountPath: '/exports',
         },
       },
       labels: config.labels,
       nodePoolLabel,
+      privileged: true,
     });
     await this.apply(deployJson);
     const svcJson = Template.getService(name, namespace, [2049, 111, 20048]);
@@ -162,6 +163,7 @@ export default class Api {
       base64Data[key] = Base64.encode(data[key]);
     }
     const api = this.config.makeApiClient(k8s.CoreV1Api);
+
     await api.createNamespacedSecret(namespace, {
       apiVersion: 'v1',
       kind: 'Secret',
@@ -244,6 +246,7 @@ export default class Api {
   async deleteResource(type: types.K8sResourceType, name: string, namespace?: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     const appV1Api = this.config.makeApiClient(k8s.AppsV1Api);
+
     if (type === 'namespace') {
       await coreApi.deleteNamespace(name);
     } else if (type === 'deployment' && namespace) {
@@ -287,6 +290,83 @@ export default class Api {
           }
         });
     });
+  }
+
+  async addLabelNamespace(name: string, labels: {[key: string]: string}) {
+    const api = this.config.makeApiClient(k8s.CoreV1Api);
+    const res = await api.readNamespace(name);
+    const finalLabels = {
+      ...res.body.metadata?.labels,
+      ...labels,
+    };
+    const options = { headers: { 'Content-type': 'application/json-patch+json' } };
+    await api.patchNamespace(name, [{
+      op: 'replace',
+      path: '/metadata/labels',
+      value: finalLabels,
+    }], undefined, undefined, undefined, undefined, options);
+  }
+
+  async createNetworkPolicy(name: string, namespace: string,
+    selectPodLabel: { [key: string]: string }, config: types.NetworkConfig) {
+    const api = this.config.makeApiClient(k8s.NetworkingV1Api);
+
+    const ingress = [
+      { from: [] as object[] },
+    ];
+    if (config.podLabel) {
+      for (const [key, value] of Object.entries(config.podLabel)) {
+        ingress[0].from.push({
+          podSelector: {
+            matchLabels: {
+              [key]: value,
+            },
+          },
+        });
+      }
+    }
+
+    if (config.ipConfig) {
+      ingress[0].from.push({
+        ipBlock: {
+          cidr: config.ipConfig.cidr,
+          ipBlock: config.ipConfig.ipBlock,
+        },
+      });
+    }
+
+    if (config.namespaceSelector) {
+      for (const [key, value] of Object.entries(config.namespaceSelector)) {
+        ingress[0].from.push({
+          namespaceSelector: {
+            matchLabels: {
+              [key]: value,
+            },
+          },
+        });
+      }
+    }
+
+    await api.createNamespacedNetworkPolicy(namespace, {
+      apiVersion: 'networking.k8s.io/v1',
+      kind: 'NetworkPolicy',
+      metadata: {
+        name,
+        namespace,
+      },
+      spec: {
+        podSelector: {
+          matchLabels: selectPodLabel,
+        },
+        policyTypes: ['Ingress'],
+        ingress,
+      },
+    });
+  }
+
+  async deleteNetworkPolicy(name: string, namespace: string) {
+    const api = this.config.makeApiClient(k8s.NetworkingV1Api);
+    await api.deleteNamespacedNetworkPolicy(name, namespace);
   }
 
   /**
@@ -450,7 +530,7 @@ export default class Api {
   parsePersistentVolumeInfo(pv: k8s.V1PersistentVolume): types.StorageInfo | undefined {
     if (pv.metadata && pv.metadata.labels && pv.status && pv.spec && pv.spec.claimRef) {
       const pvInfo = {
-        storageId: pv.metadata.labels.app,
+        appName: pv.metadata.labels.app,
         labels: pv.metadata.labels,
         status: pv.status.phase as types.StorageStatus,
         claim: {
@@ -485,7 +565,7 @@ export default class Api {
               && (!selectLabel || (item.metadata.labels[selectLabel]))
             ) {
               const storageInfo = {
-                storageId: item.metadata.labels.app,
+                appName: item.metadata.labels.app,
                 labels: item.metadata.labels,
                 status: item.status.phase as types.StorageStatus,
                 claim: {
@@ -520,7 +600,7 @@ export default class Api {
    * existStorage
    * @params name: Storage Name.
   */
-  async existPersistentVolume(name: string, namespace: string) {
+  async existPersistentVolumeClaim(name: string, namespace: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     try {
       await coreApi.readNamespacedPersistentVolumeClaim(name, namespace);
@@ -667,5 +747,30 @@ export default class Api {
       return result.body;
     }
     throw new Error('not Exist Pod Name.');
+  }
+
+  async isSelectLabel(resourceType: 'deployment' | 'pvc' | 'namespace', name: string,
+    namespace: string = 'default', labels: {[key: string]: string}) {
+    const appV1Api = this.config.makeApiClient(k8s.AppsV1Api);
+    const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
+    let targetLabels = {};
+
+    if (resourceType === 'deployment') {
+      const res = await appV1Api.readNamespacedDeploymentStatus(name, namespace);
+      targetLabels = res.body.metadata?.labels || {};
+    } else if (resourceType === 'pvc') {
+      const res = await coreApi.readNamespacedPersistentVolumeClaim(name, namespace);
+      targetLabels = res.body.metadata?.labels || {};
+    } else {
+      // namespace
+      const res = await coreApi.readNamespace(name);
+      targetLabels = res.body.metadata?.labels || {};
+    }
+    for (const [key, value] of Object.entries(labels)) {
+      if (targetLabels[key] !== value) {
+        return false;
+      }
+    }
+    return true;
   }
 }
