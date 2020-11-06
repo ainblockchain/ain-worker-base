@@ -190,7 +190,7 @@ export default class Template {
               },
             },
             corsPolicy: {
-              allowHeaders: ['x-access-token'],
+              allowHeaders: ['x-access-token', 'authorization', 'content-type', 'Accept', 'Origin'],
               allowOrigin: ['*'],
               allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
             },
