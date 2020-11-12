@@ -1,7 +1,6 @@
 import * as k8s from '@kubernetes/client-node';
 import { Base64 } from 'js-base64';
 import * as request from 'request';
-import Template from './template';
 import * as types from '../../common/types';
 
 export default class Api {
@@ -16,7 +15,7 @@ export default class Api {
 
   /**
    * Get Api instance for Singleton Pattern.
-   * @params configPath: Kubernetes Config Path.
+   * @param configPath: Kubernetes Config Path.
    * @returns Api instance.
   */
   static getInstance(configPath: string) {
@@ -29,7 +28,7 @@ export default class Api {
 
   /**
    * convert hwSpec to K8s Unit hwSpec.
-   * @params hwSpec: hw spec (cpu, gpu, memory).
+   * @param hwSpec: hw spec (cpu, gpu, memory).
    * @returns K8s Unit hwSpec.
   */
   convertToK8sUnit(hwSpec: types.HwSpec) {
@@ -42,7 +41,7 @@ export default class Api {
 
   /**
    * hwspec to cpu "m".
-   * @params k8sUnit: k8s CPU resource Spec (ex. 1000m).
+   * @param k8sUnit: k8s CPU resource Spec (ex. 1000m).
   */
   convertK8sUnitCpu(k8sUnit: string) {
     if (k8sUnit.includes('m')) return parseInt(k8sUnit, 10);
@@ -51,7 +50,7 @@ export default class Api {
 
   /**
    * hwspec to Memory "Mi".
-   * @params k8sUnit: k8s MEMORY resource Spec (ex. 10Gi).
+   * @param k8sUnit: k8s MEMORY resource Spec (ex. 10Gi).
   */
   convertK8sUnitMemory(k8sUnit: string) {
     if (k8sUnit.includes('Ki') || k8sUnit.includes('K')) return Math.round(parseInt(k8sUnit, 10) / 1000);
@@ -61,7 +60,7 @@ export default class Api {
 
   /**
    * convert K8s hwSpec to Connect Unit hwSpec.
-   * @params hwSpec: K8s hw spec (cpu, nvidia.com/gpu, memory).
+   * @param hwSpec: K8s hw spec (cpu, nvidia.com/gpu, memory).
    * @returns K8s Unit hwSpec.
   */
   convertToUnit(hwSpec: types.HwK8sSpec) {
@@ -74,7 +73,7 @@ export default class Api {
 
   /**
    * Apply yaml in JSON.
-   * @params kubeJson: k8s yaml in JSON.
+   * @param kubeJson: k8s yaml in JSON.
   */
   async apply(kubeJson: k8s.KubernetesObject) {
     kubeJson.metadata = kubeJson.metadata || {};
@@ -97,62 +96,11 @@ export default class Api {
   }
 
   /**
-   * Create NFS Server in Cluster.
-   * @params name: Storage Name.
-   * @params namespace: Namespace Name.
-   * @params capacity: Storage capacity (x GB).
-   * @params config: Storage Config (accessModes ...).
-   * @params resourceLimits: k8s resourceLimits.
-   * @params  nodePoolLabel: params for select nodePool.
-   *          [if it is undefined then select from all nodepool]
-   * @returns clusterIp: NFS Cluster IP
-  */
-  async createLocalNfsServer(name: string, namespace: string,
-    config: types.StorageConfig, resourceLimits: types.HwSpec, nodePoolLabel?: Object) {
-    const nfsName = `nfs-${name}`;
-
-    // Create PVC.
-    const pvcJson = Template.getPersistentVolumeClaim(nfsName, namespace, config);
-    await this.apply(pvcJson);
-    // Create NFS Server.
-    const deployJson = Template.getDeployment(name, namespace, {
-      imagePath: 'k8s.gcr.io/volume-nfs:0.8',
-      ports: [2049, 111, 20048],
-      resourceLimits: this.convertToK8sUnit(resourceLimits),
-    }, {
-      storageSpec: {
-        [nfsName]: {
-          mountPath: '/exports',
-        },
-      },
-      labels: config.labels,
-      nodePoolLabel,
-      privileged: true,
-    });
-    await this.apply(deployJson);
-    const svcJson = Template.getService(name, namespace, [2049, 111, 20048]);
-    const result = await this.apply(svcJson);
-
-    return result['spec']['clusterIP'];
-  }
-
-  /**
-   * Delete NFS Server in Cluster.
-   * @params name: Storage Name.
-   * @params namespace: Namespace Name.
-  */
-  async deleteLocalNfsServer(name: string, namespace: string) {
-    await this.deleteResource('service', name, namespace);
-    await this.deleteResource('deployment', name, namespace);
-    await this.deleteResource('persistentVolumeClaim', `nfs-${name}`, namespace);
-  }
-
-  /**
    * Create Secret.
-   * @params name: Secret Name.
-   * @params namespace: Namespace Name.
-   * @params type: Secret Type (ex. Opaque).
-   * @params data: Secret Data.
+   * @param name: Secret Name.
+   * @param namespace: Namespace Name.
+   * @param type: Secret Type (ex. Opaque).
+   * @param data: Secret Data.
   */
   async createSecret(
     name: string, namespace: string,
@@ -177,7 +125,7 @@ export default class Api {
 
   /**
    * Get Secret Data for Private Docker Registry.
-   * @params dockerAuth: Private Docker Registry Username,Password,Addr.
+   * @param dockerAuth: Private Docker Registry Username,Password,Addr.
   */
   getDockerSecretData(dockerAuth: types.DockerAuthInfo) {
     const auth = Base64.encode(`${dockerAuth.username}:${dockerAuth.password}`);
@@ -196,9 +144,9 @@ export default class Api {
 
   /**
    * Create Secret for Private Docker Repository.
-   * @params name: Secret Name.
-   * @params namespace: Namespace Name.
-   * @params dockerAuth: Private Docker Registry Username,Password,Addr.
+   * @param name: Secret Name.
+   * @param namespace: Namespace Name.
+   * @param dockerAuth: Private Docker Registry Username,Password,Addr.
   */
   async createDockerSecret(
     name: string, namespace: string, dockerAuth: types.DockerAuthInfo,
@@ -209,8 +157,8 @@ export default class Api {
 
   /**
    * Delete VirtualService by AppName
-   * @params appName: App Name.
-   * @params namespace: Namespace Name.
+   * @param appName: App Name.
+   * @param namespace: Namespace Name.
   */
   async deleteVirtualService(appName: string, namespace: string) {
     let opts = {} as request.Options;
@@ -240,8 +188,8 @@ export default class Api {
 
   /**
    * Delete K8s Resource (ex, namespace,...).
-   * @params type: K8s Resource Type.
-   * @params namespace: Namespace Name.
+   * @param type: K8s Resource Type.
+   * @param namespace: Namespace Name.
   */
   async deleteResource(type: types.K8sResourceType, name: string, namespace?: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
@@ -262,9 +210,10 @@ export default class Api {
     } else if (type === 'storage' && namespace) {
       await coreApi.deleteNamespacedPersistentVolumeClaim(name, namespace)
         .catch(() => {});
-      await coreApi.deletePersistentVolume(name);
+      await coreApi.deletePersistentVolume(name)
+        .catch(() => {});
     } else {
-      throw new Error('Invalid Params');
+      throw new Error('Invalid param');
     }
   }
 
@@ -371,7 +320,7 @@ export default class Api {
 
   /**
    * Parse Pod Information From k8s.V1Pod
-   * @params pod: k8s.V1Pod
+   * @param pod: k8s.V1Pod
   */
   parsePodInfo(pod: k8s.V1Pod): types.PodInfo | undefined {
     if (pod.spec && pod.metadata && pod.status && pod.metadata.labels
@@ -398,7 +347,7 @@ export default class Api {
 
   /**
    * Get Pod Resource Limits using Container Specs.
-   * @params containers: Containers in Pod.
+   * @param containers: Containers in Pod.
   */
   getPodLimit(containers: k8s.V1Container[]) {
     const limits = {
@@ -425,8 +374,8 @@ export default class Api {
 
   /**
    * Get Pod Information.
-   * @params appName: App Name about pod Label.
-   * @params namespace: Namespace Name.
+   * @param appName: App Name about pod Label.
+   * @param namespace: Namespace Name.
   */
   async getPodInfobyAppName(appName: string, namespace: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
@@ -482,8 +431,8 @@ export default class Api {
 
   /**
    * Get Node Information.
-   * @params nodePoolLabel: label for finding NodePool.
-   * @params namespace: Namespace Name.
+   * @param nodePoolLabel: label for finding NodePool.
+   * @param namespace: Namespace Name.
   */
   async getNodesInfo(nodePoolLabel: string, gpuTypeLabel: string) {
     const url = `${this.config.getCurrentCluster()!.server}/api/v1/nodes`;
@@ -525,7 +474,7 @@ export default class Api {
 
   /**
    * Parse PersistentVolume Information From k8s.V1PersistentVolume.
-   * @params pv: k8s.V1PersistentVolume.
+   * @param pv: k8s.V1PersistentVolume.
   */
   parsePersistentVolumeInfo(pv: k8s.V1PersistentVolume): types.StorageInfo | undefined {
     if (pv.metadata && pv.metadata.labels && pv.status && pv.spec && pv.spec.claimRef) {
@@ -545,7 +494,7 @@ export default class Api {
 
   /**
      * Get All persistentvolumes Information.
-     * @params selectLabel: label for selecting persistentvolumes
+     * @param selectLabel: label for selecting persistentvolumes
   */
   async getPersistentVolumeInfoList(selectLabel?: string) {
     const url = `${this.config.getCurrentCluster()!.server}/api/v1/persistentvolumes`;
@@ -583,8 +532,8 @@ export default class Api {
 
   /**
    * existDeployment
-   * @params name: Deployment Name.
-   * @params namespace: Namespace Name.
+   * @param name: Deployment Name.
+   * @param namespace: Namespace Name.
   */
   async existDeployment(name: string, namespace: string) {
     const appV1Api = this.config.makeApiClient(k8s.AppsV1Api);
@@ -598,7 +547,7 @@ export default class Api {
 
   /**
    * existStorage
-   * @params name: Storage Name.
+   * @param name: Storage Name.
   */
   async existPersistentVolumeClaim(name: string, namespace: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
@@ -612,8 +561,8 @@ export default class Api {
 
   /**
    * existSecret
-   * @params name: Secret Name.
-   * @params namespace: namespace Name.
+   * @param name: Secret Name.
+   * @param namespace: namespace Name.
   */
   async existSecret(name: string, namespace: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
@@ -627,7 +576,7 @@ export default class Api {
 
   /**
    * existNamespace
-   * @params name: Namespace Name.
+   * @param name: Namespace Name.
   */
   async existNamespace(name: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
@@ -641,9 +590,9 @@ export default class Api {
 
   /**
    * Configrate Deployment
-   * @params name: Deployment Name.
-   * @params namespace: namespace Name.
-   * @params config: namespace Name.
+   * @param name: Deployment Name.
+   * @param namespace: namespace Name.
+   * @param config: namespace Name.
   */
   async editDeployment(name: string, namespace: string, config: types.DeploymentConfig) {
     const patch = [];
@@ -734,8 +683,8 @@ export default class Api {
 
   /**
    * Get Container Log.
-   * @params appName
-   * @params namespace
+   * @param appName
+   * @param namespace
   */
   getContainerLog = async (appName: string, namespace: string, sinceSeconds?: number) => {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);

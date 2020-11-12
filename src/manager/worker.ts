@@ -4,6 +4,7 @@ import Logger from '../common/logger';
 import * as types from '../common/types';
 import * as K8sUtil from '../util/k8s';
 import { error } from '../common/constants';
+import * as constants from '../common/constants';
 
 const log = Logger.createLogger('manager.worker');
 
@@ -396,40 +397,26 @@ export default class WorkerBase {
   Promise<ConnectSdk.types.CreateStorageReturn> => {
     log.info(`[+] createStorage [namespaceId: ${params.namespaceId}, address: ${address}] `);
 
-    const existResult = await this.k8sApi.existNamespace(params.namespaceId);
-    if (!existResult) {
-      throw { statusCode: error.invalidParams, errMessage: 'Invalid NamespaceId.' };
-    }
-    const storageId = getRandomString();
-    try { // Create NFS Resource. (Create GCP PV, NFS Deployment,Service.)
-      const clusterIp = await this.k8sApi.createLocalNfsServer(storageId, params.namespaceId, {
-        capacity: params.capacity,
-        storageClassName: '',
-        accessModes: 'ReadWriteOnce',
-        labels: {
-          ainConnect: 'yes',
-          nfs: 'yes',
-        },
-      }, {
-        cpu: 500, // temp resource Limits
-        memory: 500,
-        gpu: 0,
-      });
-
-      const pvJson = K8sUtil.Template.getPersistentVolume(storageId, {
-        capacity: params.capacity,
-        nfsInfo: { server: clusterIp, path: '/' },
-        storageClassName: storageId,
-        accessModes: 'ReadWriteMany',
-        labels: {
-          ainConnect: 'yes',
-        },
-      });
-      await this.k8sApi.apply(pvJson);
-      // Create Storage.
+    try {
+      const storageId = getRandomString();
+      const storageClassName = (params.nfsInfo) ? storageId : constants.STORAGE_CLASS;
+      if (params.nfsInfo) {
+        // Create PV.
+        const pvJson = K8sUtil.Template.getPersistentVolume(storageId, {
+          capacity: params.capacity,
+          nfsInfo: params.nfsInfo,
+          storageClassName,
+          accessModes: 'ReadWriteMany',
+          labels: {
+            ainConnect: 'yes',
+          },
+        });
+        await this.k8sApi.apply(pvJson);
+      }
+      // Create PVC.
       const pvcJson = K8sUtil.Template.getPersistentVolumeClaim(storageId, params.namespaceId, {
         capacity: params.capacity,
-        storageClassName: storageId,
+        storageClassName,
         accessModes: 'ReadWriteMany',
         labels: {
           ainConnect: 'yes',
@@ -459,8 +446,6 @@ export default class WorkerBase {
     try {
       // Delete pv,pvc.
       await this.k8sApi.deleteResource('storage', params.storageId, params.namespaceId);
-      // Delete NFS Resource.
-      await this.k8sApi.deleteLocalNfsServer(params.storageId, params.namespaceId);
       return {};
     } catch (err) {
       log.error(`[-] Failed to delete Storage - ${err.message}`);

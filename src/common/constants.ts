@@ -9,6 +9,8 @@ export const {
   TEST,
 } = process.env;
 
+export const STORAGE_CLASS = process.env.STORAGE_CLASS || '';
+
 export const error = {
   unauthorized: '2',
   invalidParams: '1',
