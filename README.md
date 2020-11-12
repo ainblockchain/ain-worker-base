@@ -16,7 +16,7 @@
 ## 시작
 ```
 yarn
-NODE_ENV={staging or prod} CLUSTER_NAME=donghyeon MNEMONIC='mnemonic' CONFIG_PATH='./config.yaml' yarn start
+NODE_ENV={staging or prod} CLUSTER_NAME=donghyeon MNEMONIC='mnemonic' STORAGE_CLASS={(optional)'managed-premium'} CONFIG_PATH='./config.yaml' yarn start
 ```
 
 ## 유닛 테스트 실행
