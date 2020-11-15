@@ -100,6 +100,8 @@ export type ContainerSpec = {
 export type StorageSpec = {
   [storageId: string]: {
     mountPath: string, // to Container
+    subPath?: string,
+    readOnly?: 0 | 1,
   }
 }
 

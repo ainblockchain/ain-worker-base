@@ -93,10 +93,13 @@ export default class Template {
           name: storageId,
           persistentVolumeClaim: { claimName: storageId },
         });
-        templateJson.spec.template.spec.containers[0].volumeMounts.push({
+
+        templateJson.spec.template.spec.containers[0].volumeMounts.push(JSON.parse(JSON.stringify({
           name: storageId,
           mountPath: storageSpec.mountPath,
-        });
+          readOnly: !!(storageSpec.readOnly),
+          subPath: storageSpec.subPath,
+        })));
       }
     }
 
@@ -144,7 +147,7 @@ export default class Template {
     };
 
     for (const port of ports) {
-      templateJson.spec.ports.push({ name: `http${port}`, port, targetPort: port });
+      templateJson.spec.ports.push({ name: `http-tcp${port}`, port, targetPort: port });
     }
 
     return templateJson;

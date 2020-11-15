@@ -52,6 +52,10 @@ export default class WorkerBase {
     if (!test) {
       this.connectSdk = new ConnectSdk.Worker(workerInfo.mnemonic, workerInfo.clusterName, env);
     }
+    log.info(`[+] Worker Info ( 
+      Worker Name: ${workerInfo.clusterName}
+      Worker Address: ${this.connectSdk.getAddress()}
+    )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
     this.nodeLimits = {};
@@ -506,10 +510,8 @@ export default class WorkerBase {
       const nodePoolDict = await this.k8sApi.getNodesInfo(
         WorkerBase.k8sConstants.nodePoolLabelName, WorkerBase.k8sConstants.gpuTypeLabelName,
       );
-      let nodeCnt = 0;
       for (const nodepool of Object.keys(nodePoolDict)) {
         for (const nodeName of Object.keys(nodePoolDict[nodepool].nodes)) {
-          nodeCnt += 1;
           const node = nodePoolDict[nodepool].nodes[nodeName];
           let currentLimits;
           if (this.nodeLimits[nodeName]) { // It is updated periodically using Pod Information.
@@ -534,7 +536,6 @@ export default class WorkerBase {
         nodePool: nodePoolDict,
         clusterName: this.workerInfo.clusterName,
       });
-      log.debug(`[+] nodePool List [Number of Nodes: ${nodeCnt}]`);
     } catch (err) {
       log.error(`[-] Failed to get NodeInfo ${err}`);
     }
@@ -544,7 +545,6 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podUpdataAndAdd - podName: ${data.name}`);
     try {
       // Stores all pod information for each node.
       if (!this.nodeLimits[data.targetNodeName]) {
@@ -599,7 +599,6 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [DELETE].
   */
   protected podDeleteCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podDeleteCallback - podName: ${data.name}`);
     if (this.nodeLimits[data.targetNodeName]
       && this.nodeLimits[data.targetNodeName][data.name]) {
       delete this.nodeLimits[data.targetNodeName][data.name];
