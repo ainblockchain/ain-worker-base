@@ -15,8 +15,13 @@
 
 ## 시작
 ```
+// local
 yarn
-NODE_ENV={staging or prod} CLUSTER_NAME=donghyeon MNEMONIC='mnemonic' STORAGE_CLASS={(optional)'managed-premium'} CONFIG_PATH='./config.yaml' yarn start
+NODE_ENV={staging or prod} CLUSTER_NAME={ex. comcom{} MNEMONIC='${mnemonic}' STORAGE_CLASS={(optional)'azurefile'} CONFIG_PATH='./config.yaml' yarn start
+
+// docker
+
+sudo docker run -d --name worker -v {k8s config path}:/server/config.yaml -e CLUSTER_NAME={ex. comcom{} -e MNEMONIC='${mnemonic}' -e STORAGE_CLASS={(optional)'azurefile'} -e CONFIG_PATH='./config.yaml' ainblockchain/ain-connect-base
 ```
 
 ## 유닛 테스트 실행
