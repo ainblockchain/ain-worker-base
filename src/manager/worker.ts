@@ -4,6 +4,7 @@ import Logger from '../common/logger';
 import * as types from '../common/types';
 import * as K8sUtil from '../util/k8s';
 import { error } from '../common/constants';
+import * as constants from '../common/constants';
 
 const log = Logger.createLogger('manager.worker');
 
@@ -51,6 +52,10 @@ export default class WorkerBase {
     if (!test) {
       this.connectSdk = new ConnectSdk.Worker(workerInfo.mnemonic, workerInfo.clusterName, env);
     }
+    log.info(`[+] Worker Info ( 
+      Worker Name: ${workerInfo.clusterName}
+      Worker Address: ${this.connectSdk.getAddress()}
+    )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
     this.nodeLimits = {};
@@ -396,40 +401,26 @@ export default class WorkerBase {
   Promise<ConnectSdk.types.CreateStorageReturn> => {
     log.info(`[+] createStorage [namespaceId: ${params.namespaceId}, address: ${address}] `);
 
-    const existResult = await this.k8sApi.existNamespace(params.namespaceId);
-    if (!existResult) {
-      throw { statusCode: error.invalidParams, errMessage: 'Invalid NamespaceId.' };
-    }
-    const storageId = getRandomString();
-    try { // Create NFS Resource. (Create GCP PV, NFS Deployment,Service.)
-      const clusterIp = await this.k8sApi.createLocalNfsServer(storageId, params.namespaceId, {
-        capacity: params.capacity,
-        storageClassName: '',
-        accessModes: 'ReadWriteOnce',
-        labels: {
-          ainConnect: 'yes',
-          nfs: 'yes',
-        },
-      }, {
-        cpu: 500, // temp resource Limits
-        memory: 500,
-        gpu: 0,
-      });
-
-      const pvJson = K8sUtil.Template.getPersistentVolume(storageId, {
-        capacity: params.capacity,
-        nfsInfo: { server: clusterIp, path: '/' },
-        storageClassName: storageId,
-        accessModes: 'ReadWriteMany',
-        labels: {
-          ainConnect: 'yes',
-        },
-      });
-      await this.k8sApi.apply(pvJson);
-      // Create Storage.
+    try {
+      const storageId = getRandomString();
+      const storageClassName = (params.nfsInfo) ? storageId : constants.STORAGE_CLASS;
+      if (params.nfsInfo) {
+        // Create PV.
+        const pvJson = K8sUtil.Template.getPersistentVolume(storageId, {
+          capacity: params.capacity,
+          nfsInfo: params.nfsInfo,
+          storageClassName,
+          accessModes: 'ReadWriteMany',
+          labels: {
+            ainConnect: 'yes',
+          },
+        });
+        await this.k8sApi.apply(pvJson);
+      }
+      // Create PVC.
       const pvcJson = K8sUtil.Template.getPersistentVolumeClaim(storageId, params.namespaceId, {
         capacity: params.capacity,
-        storageClassName: storageId,
+        storageClassName,
         accessModes: 'ReadWriteMany',
         labels: {
           ainConnect: 'yes',
@@ -459,8 +450,6 @@ export default class WorkerBase {
     try {
       // Delete pv,pvc.
       await this.k8sApi.deleteResource('storage', params.storageId, params.namespaceId);
-      // Delete NFS Resource.
-      await this.k8sApi.deleteLocalNfsServer(params.storageId, params.namespaceId);
       return {};
     } catch (err) {
       log.error(`[-] Failed to delete Storage - ${err.message}`);
@@ -521,10 +510,8 @@ export default class WorkerBase {
       const nodePoolDict = await this.k8sApi.getNodesInfo(
         WorkerBase.k8sConstants.nodePoolLabelName, WorkerBase.k8sConstants.gpuTypeLabelName,
       );
-      let nodeCnt = 0;
       for (const nodepool of Object.keys(nodePoolDict)) {
         for (const nodeName of Object.keys(nodePoolDict[nodepool].nodes)) {
-          nodeCnt += 1;
           const node = nodePoolDict[nodepool].nodes[nodeName];
           let currentLimits;
           if (this.nodeLimits[nodeName]) { // It is updated periodically using Pod Information.
@@ -549,7 +536,6 @@ export default class WorkerBase {
         nodePool: nodePoolDict,
         clusterName: this.workerInfo.clusterName,
       });
-      log.debug(`[+] nodePool List [Number of Nodes: ${nodeCnt}]`);
     } catch (err) {
       log.error(`[-] Failed to get NodeInfo ${err}`);
     }
@@ -559,7 +545,6 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podUpdataAndAdd - podName: ${data.name}`);
     try {
       // Stores all pod information for each node.
       if (!this.nodeLimits[data.targetNodeName]) {
@@ -614,7 +599,6 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [DELETE].
   */
   protected podDeleteCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podDeleteCallback - podName: ${data.name}`);
     if (this.nodeLimits[data.targetNodeName]
       && this.nodeLimits[data.targetNodeName][data.name]) {
       delete this.nodeLimits[data.targetNodeName][data.name];

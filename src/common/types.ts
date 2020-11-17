@@ -36,8 +36,8 @@ export type HwK8sSpec = {
 };
 
 /**
- * @params path: NFS Base Path.
- * @params server: NFS Address.
+ * @param path: NFS Base Path.
+ * @param server: NFS Address.
 */
 export type NfsInfo = {
   path: string;
@@ -45,9 +45,9 @@ export type NfsInfo = {
 }
 
 /**
- * @params storageGb: Storage Capacity.
- * @params accessModes: (ReadWriteMany: Multi-node access, ReadWriteOnce: Single-node access).
- * @params nfsInfo: NFS Info.
+ * @param storageGb: Storage Capacity.
+ * @param accessModes: (ReadWriteMany: Multi-node access, ReadWriteOnce: Single-node access).
+ * @param nfsInfo: NFS Info.
 */
 export type StorageConfig = {
   capacity: number,
@@ -64,9 +64,9 @@ export type DockerAuthInfo = {
 }
 
 /**
- * @params env: Container Environment.
- * @params replicas: Number of Pods.
- * @params imagePath: Container Docker image Path.
+ * @param env: Container Environment.
+ * @param replicas: Number of Pods.
+ * @param imagePath: Container Docker image Path.
 */
 export type DeploymentConfig = {
   env?: Object;
@@ -100,6 +100,8 @@ export type ContainerSpec = {
 export type StorageSpec = {
   [storageId: string]: {
     mountPath: string, // to Container
+    subPath?: string,
+    readOnly?: 0 | 1,
   }
 }
 
@@ -110,13 +112,13 @@ export type SecretSpecs = {
 }
 
 /**
- * @params storageSpec: Storage Info for mounting storage to Container.
- * @params secretSpec: Secret Info for mounting storage to Container.
- * @params imagePullSecretName: Secret Name about private Docker registry.
- * @params labels: deploy,pod labels
- * @params nodePoolLabel: params for select nodePool.
- * @params replicas: Number of Pods.
- * @params privileged: root authority.
+ * @param storageSpec: Storage Info for mounting storage to Container.
+ * @param secretSpec: Secret Info for mounting storage to Container.
+ * @param imagePullSecretName: Secret Name about private Docker registry.
+ * @param labels: deploy,pod labels
+ * @param nodePoolLabel: param for select nodePool.
+ * @param replicas: Number of Pods.
+ * @param privileged: root authority.
 */
 export type DeploymentCreateConfig = {
   storageSpec?: StorageSpec;

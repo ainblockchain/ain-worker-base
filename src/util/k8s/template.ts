@@ -3,8 +3,8 @@ import * as types from '../../common/types';
 export default class Template {
   /**
    * Get Namespace Template.
-   * @params name: Namespace Name.
-   * @params labels.
+   * @param name: Namespace Name.
+   * @param labels.
   */
   static getNamespace(name: string, labels?: {[key: string]: string}) {
     const templateJson = {
@@ -93,10 +93,13 @@ export default class Template {
           name: storageId,
           persistentVolumeClaim: { claimName: storageId },
         });
-        templateJson.spec.template.spec.containers[0].volumeMounts.push({
+
+        templateJson.spec.template.spec.containers[0].volumeMounts.push(JSON.parse(JSON.stringify({
           name: storageId,
           mountPath: storageSpec.mountPath,
-        });
+          readOnly: !!(storageSpec.readOnly),
+          subPath: storageSpec.subPath,
+        })));
       }
     }
 
@@ -120,10 +123,10 @@ export default class Template {
 
   /**
    * Get Service Template.
-   * @params name: Service Name.
-   * @params namespace: Namespace Name.
-   * @params ports: Port List that is internal Port and exteral Port.
-   * @params labels: labels.
+   * @param name: Service Name.
+   * @param namespace: Namespace Name.
+   * @param ports: Port List that is internal Port and exteral Port.
+   * @param labels: labels.
   */
   static getService(name: string, namespace: string,
     ports: number[], labels?: {[key: string]: string }) {
@@ -144,7 +147,7 @@ export default class Template {
     };
 
     for (const port of ports) {
-      templateJson.spec.ports.push({ name: `http${port}`, port, targetPort: port });
+      templateJson.spec.ports.push({ name: `http-tcp${port}`, port, targetPort: port });
     }
 
     return templateJson;
@@ -152,13 +155,13 @@ export default class Template {
 
   /**
    * Get VirtualService Template.
-   * @params name: VirtualService Name.
-   * @params namespace: Namespace Name.
-   * @params endpoint: full Domain Name for Pod.
-   * @params serviceName: k8s Service Name.
-   * @params gateway: istio gateway Name.
-   * @params port: It is Service extenal Port.
-   * @params labels: labels.
+   * @param name: VirtualService Name.
+   * @param namespace: Namespace Name.
+   * @param endpoint: full Domain Name for Pod.
+   * @param serviceName: k8s Service Name.
+   * @param gateway: istio gateway Name.
+   * @param port: It is Service extenal Port.
+   * @param labels: labels.
   */
   static getVirtualService(
     name: string, namespace: string, serviceName: string,
@@ -204,9 +207,9 @@ export default class Template {
 
   /**
    * Get PersistentVolume Template.
-   * @params name: Storage Name.
-   * @params capacity: Storage capacity (x GB).
-   * @params config: Storage Config (Storage capacity ...).
+   * @param name: Storage Name.
+   * @param capacity: Storage capacity (x GB).
+   * @param config: Storage Config (Storage capacity ...).
   */
   static getPersistentVolume(
     name: string, config: types.StorageConfig,
@@ -231,9 +234,9 @@ export default class Template {
 
   /**
    * Get PersistentVolumeClaim Template.
-   * @params name: Storage Name.
-   * @params namespace: Namespace Name.
-   * @params config: Storage Config (accessModes ...).
+   * @param name: Storage Name.
+   * @param namespace: Namespace Name.
+   * @param config: Storage Config (accessModes ...).
   */
   static getPersistentVolumeClaim(
     name: string, namespace: string, config: types.StorageConfig,
