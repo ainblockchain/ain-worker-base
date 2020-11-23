@@ -1,4 +1,5 @@
 import * as k8s from '@kubernetes/client-node';
+import * as ConnectSdk from '@aindev/connect-sdk';
 
 export type NODE_ENV = 'prod' | 'staging';
 
@@ -88,6 +89,16 @@ export type PodInfo = {
     message?: string,
     containerStatuses?: k8s.V1ContainerStatus[],
   },
+}
+export type GetPodInfo = {
+  updatedAt: number;
+  params: {
+    namespaceId: string;
+    podName: string;
+    status: {
+      phase: ConnectSdk.types.PodPhaseList;
+    }
+  };
 }
 
 export type ContainerSpec = {

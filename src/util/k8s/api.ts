@@ -323,8 +323,7 @@ export default class Api {
    * @param pod: k8s.V1Pod
   */
   parsePodInfo(pod: k8s.V1Pod): types.PodInfo | undefined {
-    if (pod.spec && pod.metadata && pod.status && pod.metadata.labels
-      && pod.status.conditions) {
+    if (pod.spec && pod.metadata && pod.status && pod.metadata.labels) {
       const { containers } = pod.spec;
       const resourcelimits = this.getPodLimit(containers);
       const podInfo = {
@@ -674,11 +673,11 @@ export default class Api {
       console.log(err);
       await errorCallback();
       // Restart informer after 5sec
-      setTimeout(() => {
-        informer.start();
+      setTimeout(async () => {
+        await informer.start();
       }, 5000);
     });
-    informer.start();
+    await informer.start();
   }
 
   /**
