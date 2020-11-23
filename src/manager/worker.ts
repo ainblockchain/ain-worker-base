@@ -580,6 +580,7 @@ export default class WorkerBase {
       },
     });
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
+    if (!this.connectContainerInfo[data.appName]) this.connectContainerInfo[data.appName] = {};
     this.connectContainerInfo[data.appName][data.name] = {
       params: {
         namespaceId: data.namespaceId,
