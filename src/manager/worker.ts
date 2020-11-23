@@ -37,6 +37,8 @@ export default class WorkerBase {
 
   static nodeWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
 
+  static podWriteTime = 10000;
+
   protected nodeLimits: { // Node resource Limits
     [nodeName: string]: {
       [podName: string]: {
@@ -46,6 +48,8 @@ export default class WorkerBase {
       };
     }
   }
+
+  protected connectContainerInfo: ConnectSdk.types.GetAllContainersReturn;
 
   constructor(workerInfo: types.WorkerInfo, env: 'staging' | 'prod',
     k8sConfigPath: string, test: boolean = false) {
@@ -59,6 +63,7 @@ export default class WorkerBase {
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
     this.nodeLimits = {};
+    this.connectContainerInfo = {};
     this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
   }
 
@@ -89,8 +94,8 @@ export default class WorkerBase {
     await this.initMaxDurationTimer();
     // Start to get node Information.
     setInterval(this.intervalNodeInfoHandler, WorkerBase.nodeWriteTime);
+    setInterval(this.intervalPodInfosCheck, WorkerBase.podWriteTime);
     // Start to get Pod Information.
-    this.watchPodInfos();
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
       deploy: this.deploy,
@@ -121,6 +126,7 @@ export default class WorkerBase {
     const k8sPodNameList = podInfoList.map((item) => item.name);
 
     if (allContainerInfo) {
+      this.connectContainerInfo = allContainerInfo;
       for (const [containerId, containerInfo] of Object.entries(allContainerInfo)) {
         for (const podName of Object.keys(containerInfo)) {
           if (!k8sPodNameList.includes(podName)) {
@@ -128,6 +134,9 @@ export default class WorkerBase {
               this.workerInfo.clusterName, containerId,
               podName,
             );
+            if (this.connectContainerInfo && this.connectContainerInfo[containerId][podName]) {
+              delete this.connectContainerInfo[containerId][podName];
+            }
           }
         }
       }
@@ -541,10 +550,51 @@ export default class WorkerBase {
     }
   }
 
+  protected convertStatus = (data: types.PodInfo): ConnectSdk.types.PodPhaseList => {
+    let phase = data.status.phase.toLowerCase();
+    if (phase === 'unknown') {
+      phase = 'failed';
+    } else if (phase === 'pending' && data.status.containerStatuses) {
+      const reson = data.status.containerStatuses[0].state?.waiting?.reason;
+      if (reson && reson === 'ContainerCreating') {
+        phase = 'createContainer';
+      }
+    } else if (phase === 'running') {
+      phase = 'success';
+    }
+    return phase as ConnectSdk.types.PodPhaseList;
+  }
+
+  protected writePodStatus = async (data: types.PodInfo) => {
+    const phase = this.convertStatus(data);
+    await this.connectSdk.setPodStatus({
+      clusterName: this.workerInfo.clusterName,
+      containerId: data.appName,
+      podId: data.name,
+      podStatus: {
+        podName: data.name,
+        namespaceId: data.namespaceId,
+        status: {
+          phase,
+        },
+      },
+    });
+    if (!this.connectContainerInfo) this.connectContainerInfo = {};
+    this.connectContainerInfo[data.appName][data.name] = {
+      params: {
+        namespaceId: data.namespaceId,
+        podName: data.name,
+        status: { phase },
+      },
+      updatedAt: 0,
+    };
+  }
+
   /**
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
+    log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status}`);
     try {
       // Stores all pod information for each node.
       if (!this.nodeLimits[data.targetNodeName]) {
@@ -556,39 +606,7 @@ export default class WorkerBase {
         ainConnect: !!(data.labels && data.labels.ainConnect),
       };
       if (this.nodeLimits[data.targetNodeName][data.name].ainConnect) {
-        let phase = data.status.phase.toLowerCase();
-
-        if (phase === 'unknown') {
-          phase = 'failed';
-        } else if (phase === 'pending' && data.status.containerStatuses) {
-          const reson = data.status.containerStatuses[0].state?.waiting?.reason;
-          if (reson && reson === 'ContainerCreating') {
-            phase = 'createContainer';
-          }
-        } else if (phase === 'running') {
-          phase = 'success';
-        }
-        if (data.labels && data.labels.nfs) {
-          if (phase === 'createContainer') phase = 'createStorage';
-          await this.connectSdk.setStorageStatus({
-            clusterName: this.workerInfo.clusterName,
-            storageId: data.appName,
-            storageStatus: { status: phase as ConnectSdk.types.StorageStatus },
-          });
-        } else {
-          await this.connectSdk.setPodStatus({
-            clusterName: this.workerInfo.clusterName,
-            containerId: data.appName,
-            podId: data.name,
-            podStatus: {
-              podName: data.name,
-              namespaceId: data.namespaceId,
-              status: {
-                phase: phase as ConnectSdk.types.PodPhaseList,
-              },
-            },
-          });
-        }
+        await this.writePodStatus(data);
       }
     } catch (err) {
       log.error(err);
@@ -599,6 +617,7 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [DELETE].
   */
   protected podDeleteCallback = async (data: types.PodInfo) => {
+    log.debug(`[+] podDeleteCallback podName: ${data.appName}, status:${data.status}`);
     if (this.nodeLimits[data.targetNodeName]
       && this.nodeLimits[data.targetNodeName][data.name]) {
       delete this.nodeLimits[data.targetNodeName][data.name];
@@ -614,6 +633,9 @@ export default class WorkerBase {
           this.workerInfo.clusterName, data.appName,
           data.name,
         );
+        if (this.connectContainerInfo && this.connectContainerInfo[data.appName][data.name]) {
+          delete this.connectContainerInfo[data.appName][data.name];
+        }
       }
     }
   }
@@ -621,16 +643,67 @@ export default class WorkerBase {
   /**
    * Start to Watch Pod Information.
   */
-  protected watchPodInfos() {
-    this.k8sApi.watchPod(
+  protected async watchPodInfos() {
+    await this.k8sApi.watchPod(
       this.podUpdataOrAddCallback, // ADDED
       this.podUpdataOrAddCallback, // UPDATE
       this.podDeleteCallback, // DELETE
       async () => { // ERROR
+        log.debug('[+] watchPodInfos Error');
         // Remove Pod Information on Redis for sync.
         await this.initPodInfo();
         this.nodeLimits = {};
       },
     );
+  }
+
+  protected intervalPodInfosCheck = async () => {
+    const podInfoList = await this.k8sApi.getAllPodInfoList();
+    const promiseList = [];
+    const containerInfo = {};
+    if (!this.connectContainerInfo) this.connectContainerInfo = {};
+
+    // Create
+    for (const podInfo of podInfoList) {
+      if (!containerInfo[podInfo.appName]) containerInfo[podInfo.appName] = {};
+      if (!containerInfo[podInfo.appName][podInfo.name]) {
+        containerInfo[podInfo.appName][podInfo.name] = podInfo;
+      }
+      if (!this.nodeLimits[podInfo.targetNodeName]) this.nodeLimits[podInfo.targetNodeName] = {};
+      this.nodeLimits[podInfo.targetNodeName][podInfo.name] = {
+        limits: podInfo.resourcelimits,
+        containerId: podInfo.appName,
+        ainConnect: !!(podInfo.labels && podInfo.labels.ainConnect),
+      };
+      if (this.nodeLimits[podInfo.targetNodeName][podInfo.name].ainConnect) {
+        const preData = (this.connectContainerInfo[podInfo.appName])
+          ? this.connectContainerInfo[podInfo.appName][podInfo.name] : undefined;
+        if (!preData || (preData.params.status.phase !== this.convertStatus(podInfo))) {
+          promiseList.push(this.writePodStatus(podInfo));
+        }
+      }
+    }
+
+    // Delete
+    for (const containerId of Object.keys(this.connectContainerInfo)) {
+      for (const podId of Object.keys(this.connectContainerInfo[containerId])) {
+        if (!(containerInfo[containerId] && containerInfo[containerId][podId])) {
+          promiseList.push(this.connectSdk.deletePodStatus(
+            this.workerInfo.clusterName, containerId,
+            podId,
+          ));
+        }
+      }
+    }
+
+    for (const nodeName of Object.keys(this.nodeLimits)) {
+      for (const [podId, data] of Object.entries(this.nodeLimits[nodeName])) {
+        if (!(containerInfo[data.containerId] && containerInfo[data.containerId][podId])) {
+          delete this.nodeLimits[nodeName][podId];
+        }
+      }
+    }
+
+    await Promise.all(promiseList);
   }
 }
