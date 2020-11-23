@@ -94,7 +94,7 @@ export default class WorkerBase {
     await this.initMaxDurationTimer();
     // Start to get node Information.
     setInterval(this.intervalNodeInfoHandler, WorkerBase.nodeWriteTime);
-    setInterval(this.intervalPodInfosCheck, WorkerBase.podWriteTime);
+    setInterval(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
     // Start to get Pod Information.
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
@@ -657,7 +657,7 @@ export default class WorkerBase {
     );
   }
 
-  protected intervalPodInfosCheck = async () => {
+  protected intervalPodInfoCheck = async () => {
     const podInfoList = await this.k8sApi.getAllPodInfoList();
     const promiseList = [];
     const containerInfo = {};
