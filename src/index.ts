@@ -1,4 +1,4 @@
-import * as program from 'commander';
+import program from 'commander';
 import * as Types from './common/types';
 import * as constants from './common/constants';
 import Logger from './common/logger';
@@ -27,12 +27,17 @@ program.command('serve').action(async () => {
         username: constants.DOCKER_USERNAME,
       };
     }
-    await Worker.getInstance({
+    const worker = await Worker.getInstance({
       clusterName: constants.CLUSTER_NAME as string,
       mnemonic: constants.MNEMONIC as string,
       dockerAuth,
     }, constants.NODE_ENV as Types.NODE_ENV,
-    constants.CONFIG_PATH as string, !!constants.TEST).start();
+    constants.CONFIG_PATH as string, !!constants.TEST);
+    if (constants.IS_DOCKER) {
+      await worker.startForDocker();
+    } else {
+      await worker.startForK8s();
+    }
   } catch (err) {
     log.error(err);
   }
