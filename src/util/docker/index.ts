@@ -204,7 +204,7 @@ export default class Docker {
       image += ':latest';
     }
     return new Promise<number>((resolve, reject) => {
-      this.dockerode.pull(image, { authConfig: this.authInfo }, async (err: any, stream: any) => {
+      this.dockerode.pull(image, { authconfig: this.authInfo }, async (err: any, stream: any) => {
         if (!this.containersDict[name].status) {
           await stream.destroy();
           resolve(-1);

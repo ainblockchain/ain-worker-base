@@ -764,11 +764,13 @@ export default class WorkerBase {
     const containerId = getRandomString();
     await this.dockerApi.run(containerId, params.image, params.env, params.command);
     const containerStatus = await this.dockerApi.getContainerInfo(containerId);
-    await this.connectSdk.setContainerStatusForDocker({
-      containerStatus,
-      containerId,
-      clusterName: this.workerInfo.clusterName,
-    });
+    setTimeout(async () => {
+      await this.connectSdk.setContainerStatusForDocker({
+        containerStatus,
+        containerId,
+        clusterName: this.workerInfo.clusterName,
+      });
+    }, 3000);
     return { containerId };
   }
 
