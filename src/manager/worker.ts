@@ -18,7 +18,7 @@ const getRandomString = () => {
 export default class WorkerBase {
   static k8sConstants = {
     gatewayName: 'worker-gw', // Istio Gateway Name for Worker.
-    dockerSecretName: 'workerAuth', // Docker Secret Name.
+    dockerSecretName: 'docker-secret', // Docker Secret Name.
     nodePoolLabelName: 'Ainetwork.ai_nodepoolname', // Lebel Name for nodePool.
     gpuTypeLabelName: 'Ainetwork.ai_gpu_type', // Lebel Name for gpu Type.
     isConnectLabelName: 'ainConnect', // Lebel Name for selecting AIN Connect resource.
@@ -393,7 +393,7 @@ export default class WorkerBase {
         await this.k8sApi.createDockerSecret(WorkerBase.k8sConstants.dockerSecretName,
           namespaceId, this.workerInfo.dockerAuth);
       }
-      this.k8sApi.createNetworkPolicy('worker', namespaceId, {
+      await this.k8sApi.createNetworkPolicy('worker', namespaceId, {
         ainConnect: 'yes',
       }, {
         podLabel: {
@@ -406,7 +406,7 @@ export default class WorkerBase {
 
       return { namespaceId };
     } catch (err) {
-      log.error(`[-] failed to create Namespace - ${err.message}`);
+      log.error(`[-] failed to create Namespace - ${err.body.message}`);
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -607,6 +607,7 @@ export default class WorkerBase {
         status: {
           phase,
         },
+        image: data.image,
       },
     });
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
@@ -616,6 +617,7 @@ export default class WorkerBase {
         namespaceId: data.namespaceId,
         podName: data.name,
         status: { phase },
+        image: data.image,
       },
       updatedAt: 0,
     };

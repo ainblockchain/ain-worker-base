@@ -338,6 +338,7 @@ export default class Api {
           message: pod.status.message,
           containerStatuses: pod.status.containerStatuses,
         },
+        image: containers[0].image as string,
       };
       return podInfo;
     }
