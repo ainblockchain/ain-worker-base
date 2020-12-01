@@ -762,7 +762,7 @@ export default class WorkerBase {
     params: ConnectSdk.types.DeployForDockerParams) => {
     log.info(`[+] deployForDocker - address:${address}`);
     const containerId = getRandomString();
-    await this.dockerApi.run(containerId, params.image, params.env, params.command);
+    await this.dockerApi.run(containerId, params.image, params.env, params.command, true);
     const containerStatus = await this.dockerApi.getContainerInfo(containerId);
     setTimeout(async () => {
       await this.connectSdk.setContainerStatusForDocker({
