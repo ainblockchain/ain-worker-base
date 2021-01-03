@@ -1,6 +1,7 @@
 import { customAlphabet } from 'nanoid';
 import * as ConnectSdk from '@aindev/connect-sdk';
 import * as fs from 'fs';
+import { setIntervalAsync } from 'set-interval-async/dynamic';
 import Logger from '../common/logger';
 import * as types from '../common/types';
 import * as K8sUtil from '../util/k8s';
@@ -109,8 +110,8 @@ export default class WorkerBase {
     await this.initStorageInfo();
     await this.initMaxDurationTimer();
     // Start to get node Information.
-    setInterval(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
-    setInterval(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
+    setIntervalAsync(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
+    setIntervalAsync(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
     // Start to get Pod Information.
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
@@ -131,8 +132,8 @@ export default class WorkerBase {
   */
   async startForDocker() {
     await this.initContainerForDocker();
-    setInterval(this.intervalWorkerInfoForDocker, WorkerBase.workerInfoWriteTime);
-    setInterval(this.intervaContainerInfoForDocker, WorkerBase.containerWriteTime);
+    setIntervalAsync(this.intervalWorkerInfoForDocker, WorkerBase.workerInfoWriteTime);
+    setIntervalAsync(this.intervaContainerInfoForDocker, WorkerBase.containerWriteTime);
     await this.connectSdk.listenRequest({
       deployForDocker: this.deployForDocker,
       undeployForDocker: this.undeployForDocker,
@@ -546,6 +547,11 @@ export default class WorkerBase {
   */
   protected intervalNodeInfoHandler = async () => {
     try {
+      let podCnt = 0;
+      for (const NodeName of Object.keys(this.nodeLimits)) {
+        podCnt += Object.keys(this.nodeLimits[NodeName]).length;
+      }
+      log.debug(`[+] intervalNodeInfoHandler <podCnt: ${podCnt}>`);
       const nodePoolDict = await this.k8sApi.getNodesInfo(
         WorkerBase.k8sConstants.nodePoolLabelName, WorkerBase.k8sConstants.gpuTypeLabelName,
       );
@@ -691,7 +697,16 @@ export default class WorkerBase {
   }
 
   protected intervalPodInfoCheck = async () => {
-    const podInfoList = await this.k8sApi.getAllPodInfoList();
+    let podCnt = 0;
+    if (this.connectContainerInfo) {
+      for (const contaienrId of Object.keys(this.connectContainerInfo)) {
+        podCnt += Object.keys(this.connectContainerInfo[contaienrId]).length;
+      }
+    }
+    log.debug(`[+] intervalPodInfoCheck podCnt: ${podCnt}`);
+    const podInfoList = await this.k8sApi.getAllPodInfoList()
+      .catch((_) => []);
+
     const promiseList = [];
     const containerInfo = {};
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
@@ -725,6 +740,7 @@ export default class WorkerBase {
             this.workerInfo.clusterName, containerId,
             podId,
           ));
+          delete this.connectContainerInfo[containerId][podId];
         }
       }
     }
