@@ -63,7 +63,14 @@ export default class Api {
    * @param hwSpec: K8s hw spec (cpu, nvidia.com/gpu, memory).
    * @returns K8s Unit hwSpec.
   */
-  convertToUnit(hwSpec: types.HwK8sSpec) {
+  convertToUnit(hwSpec?: types.HwK8sSpec) {
+    if (!hwSpec) {
+      return {
+        cpu: 0,
+        memory: 0,
+        gpu: 0,
+      };
+    }
     return {
       cpu: (hwSpec.cpu) ? this.convertK8sUnitCpu(hwSpec.cpu) : 0,
       memory: (hwSpec.memory) ? this.convertK8sUnitMemory(hwSpec.memory) : 0,
@@ -338,6 +345,7 @@ export default class Api {
           message: pod.status.message,
           containerStatuses: pod.status.containerStatuses,
         },
+        image: containers[0].image as string,
       };
       return podInfo;
     }
@@ -355,16 +363,28 @@ export default class Api {
       gpu: 0,
     };
     for (const container of containers) {
-      if (container.resources && container.resources.limits) {
-        const containrLimits = this.convertToUnit(container.resources.limits as types.HwK8sSpec);
-        if (container.resources.limits.cpu) {
-          limits.cpu += containrLimits.cpu;
+      if (container.resources) {
+        const containerLimits = this.convertToUnit(container.resources.limits as types.HwK8sSpec);
+        const containerRequests = this.convertToUnit(
+          container.resources.requests as types.HwK8sSpec,
+        );
+        // CPU
+        if (container.resources.limits && container.resources.limits.cpu
+          && containerLimits.cpu > 0) {
+          limits.cpu += containerLimits.cpu;
+        } else if (container.resources.requests && container.resources.requests.cpu) {
+          limits.cpu += containerRequests.cpu;
         }
-        if (container.resources.limits.memory) {
-          limits.memory += containrLimits.memory;
+        // Memory
+        if (container.resources.limits && container.resources.limits.memory
+          && containerRequests.memory > 0) {
+          limits.memory += containerRequests.memory;
+        } else if (container.resources.requests && container.resources.requests.memory) {
+          limits.memory += containerRequests.memory;
         }
-        if (container.resources.limits['nvidia.com/gpu']) {
-          limits.gpu += containrLimits.gpu;
+        // GPU
+        if (container.resources.limits && container.resources.limits['nvidia.com/gpu']) {
+          limits.gpu += parseInt(container.resources.limits['nvidia.com/gpu'], 10);
         }
       }
     }
@@ -408,22 +428,28 @@ export default class Api {
     const url = `${this.config.getCurrentCluster()!.server}/api/v1/pods`;
 
     return new Promise<types.PodInfo[]>((resolve, reject) => {
-      const opts = {} as request.Options;
+      const opts = {
+        timeout: 10000,
+      } as request.Options;
       this.config.applyToRequest(opts);
       request.get(url, opts,
         (error, _response, _body) => {
           if (error) {
             reject(error);
           }
-          const podInfos = [];
-          const jsonData = JSON.parse(_body);
-          for (const item of jsonData.items) {
-            const podInfo = this.parsePodInfo(item);
-            if (podInfo) {
-              podInfos.push(podInfo);
+          try {
+            const podInfos = [];
+            const jsonData = JSON.parse(_body);
+            for (const item of jsonData.items) {
+              const podInfo = this.parsePodInfo(item);
+              if (podInfo) {
+                podInfos.push(podInfo);
+              }
             }
+            resolve(podInfos);
+          } catch (err) {
+            reject(err);
           }
-          resolve(podInfos);
         });
     });
   }

@@ -89,6 +89,7 @@ export type PodInfo = {
     message?: string,
     containerStatuses?: k8s.V1ContainerStatus[],
   },
+  image: string,
 }
 export type GetPodInfo = {
   updatedAt: number;

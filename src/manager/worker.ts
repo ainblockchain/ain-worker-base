@@ -1,8 +1,11 @@
 import { customAlphabet } from 'nanoid';
 import * as ConnectSdk from '@aindev/connect-sdk';
+import * as fs from 'fs';
+import { setIntervalAsync } from 'set-interval-async/dynamic';
 import Logger from '../common/logger';
 import * as types from '../common/types';
 import * as K8sUtil from '../util/k8s';
+import Docker from '../util/docker';
 import { error } from '../common/constants';
 import * as constants from '../common/constants';
 
@@ -16,7 +19,7 @@ const getRandomString = () => {
 export default class WorkerBase {
   static k8sConstants = {
     gatewayName: 'worker-gw', // Istio Gateway Name for Worker.
-    dockerSecretName: 'workerAuth', // Docker Secret Name.
+    dockerSecretName: 'docker-secret', // Docker Secret Name.
     nodePoolLabelName: 'Ainetwork.ai_nodepoolname', // Lebel Name for nodePool.
     gpuTypeLabelName: 'Ainetwork.ai_gpu_type', // Lebel Name for gpu Type.
     isConnectLabelName: 'ainConnect', // Lebel Name for selecting AIN Connect resource.
@@ -29,15 +32,19 @@ export default class WorkerBase {
 
   protected k8sApi: K8sUtil.Api;
 
+  protected dockerApi: Docker;
+
   protected workerInfo: types.WorkerInfo;
 
   protected endpoint: string;
 
   protected maxDurationTimer: any;
 
-  static nodeWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
+  static workerInfoWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
 
   static podWriteTime = 10000;
+
+  static containerWriteTime = 5000; // Lebel Name for selecting AIN Connect resource.
 
   protected nodeLimits: { // Node resource Limits
     [nodeName: string]: {
@@ -52,9 +59,15 @@ export default class WorkerBase {
   protected connectContainerInfo: ConnectSdk.types.GetAllContainersReturn;
 
   constructor(workerInfo: types.WorkerInfo, env: 'staging' | 'prod',
-    k8sConfigPath: string, test: boolean = false) {
+    k8sConfigPath?: string, test: boolean = false) {
     if (!test) {
-      this.connectSdk = new ConnectSdk.Worker(workerInfo.mnemonic, workerInfo.clusterName, env);
+      let config;
+      if (constants.FIREBASE_CONFIG_PATH) {
+        config = JSON.parse(String(fs.readFileSync(constants.FIREBASE_CONFIG_PATH)));
+      }
+      this.connectSdk = new ConnectSdk.Worker(
+        workerInfo.mnemonic, workerInfo.clusterName, env, config,
+      );
     }
     log.info(`[+] Worker Info ( 
       Worker Name: ${workerInfo.clusterName}
@@ -62,9 +75,13 @@ export default class WorkerBase {
     )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
-    this.nodeLimits = {};
-    this.connectContainerInfo = {};
-    this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
+    if (constants.IS_DOCKER !== 'true' && k8sConfigPath) {
+      this.nodeLimits = {};
+      this.connectContainerInfo = {};
+      this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
+    } else {
+      this.dockerApi = Docker.getInstance();
+    }
   }
 
   /**
@@ -72,7 +89,7 @@ export default class WorkerBase {
    * @returns WorkerBase instance.
   */
   static getInstance(workerInfo: types.WorkerInfo, env: 'staging' | 'prod',
-    k8sConfigPath: string, test: boolean = false) {
+    k8sConfigPath?: string, test: boolean = false) {
     if (!WorkerBase.instance) {
       WorkerBase.instance = new WorkerBase(workerInfo, env, k8sConfigPath, test);
     }
@@ -81,9 +98,9 @@ export default class WorkerBase {
   }
 
   /**
-   * Start Worker.
+   * Start Worker for Kubernetes.
   */
-  async start() {
+  async startForK8s() {
     // For network Policy.
     await this.k8sApi.addLabelNamespace('istio-system', {
       worker: 'yes',
@@ -93,8 +110,8 @@ export default class WorkerBase {
     await this.initStorageInfo();
     await this.initMaxDurationTimer();
     // Start to get node Information.
-    setInterval(this.intervalNodeInfoHandler, WorkerBase.nodeWriteTime);
-    setInterval(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
+    setIntervalAsync(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
+    setIntervalAsync(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
     // Start to get Pod Information.
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
@@ -106,6 +123,20 @@ export default class WorkerBase {
       createStorage: this.createStorage,
       deleteStorage: this.deleteStorage,
       getContainerLog: this.getContainerLog,
+    });
+    log.info(`[+] Start Worker [Name: ${this.workerInfo.clusterName}]`);
+  }
+
+  /**
+   * Start Worker for Docker.
+  */
+  async startForDocker() {
+    await this.initContainerForDocker();
+    setIntervalAsync(this.intervalWorkerInfoForDocker, WorkerBase.workerInfoWriteTime);
+    setIntervalAsync(this.intervaContainerInfoForDocker, WorkerBase.containerWriteTime);
+    await this.connectSdk.listenRequest({
+      deployForDocker: this.deployForDocker,
+      undeployForDocker: this.undeployForDocker,
     });
     log.info(`[+] Start Worker [Name: ${this.workerInfo.clusterName}]`);
   }
@@ -363,7 +394,7 @@ export default class WorkerBase {
         await this.k8sApi.createDockerSecret(WorkerBase.k8sConstants.dockerSecretName,
           namespaceId, this.workerInfo.dockerAuth);
       }
-      this.k8sApi.createNetworkPolicy('worker', namespaceId, {
+      await this.k8sApi.createNetworkPolicy('worker', namespaceId, {
         ainConnect: 'yes',
       }, {
         podLabel: {
@@ -376,7 +407,7 @@ export default class WorkerBase {
 
       return { namespaceId };
     } catch (err) {
-      log.error(`[-] failed to create Namespace - ${err.message}`);
+      log.error(`[-] failed to create Namespace - ${err.body.message}`);
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -516,6 +547,11 @@ export default class WorkerBase {
   */
   protected intervalNodeInfoHandler = async () => {
     try {
+      let podCnt = 0;
+      for (const NodeName of Object.keys(this.nodeLimits)) {
+        podCnt += Object.keys(this.nodeLimits[NodeName]).length;
+      }
+      log.debug(`[+] intervalNodeInfoHandler <podCnt: ${podCnt}>`);
       const nodePoolDict = await this.k8sApi.getNodesInfo(
         WorkerBase.k8sConstants.nodePoolLabelName, WorkerBase.k8sConstants.gpuTypeLabelName,
       );
@@ -577,6 +613,7 @@ export default class WorkerBase {
         status: {
           phase,
         },
+        image: data.image,
       },
     });
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
@@ -586,6 +623,7 @@ export default class WorkerBase {
         namespaceId: data.namespaceId,
         podName: data.name,
         status: { phase },
+        image: data.image,
       },
       updatedAt: 0,
     };
@@ -659,7 +697,16 @@ export default class WorkerBase {
   }
 
   protected intervalPodInfoCheck = async () => {
-    const podInfoList = await this.k8sApi.getAllPodInfoList();
+    let podCnt = 0;
+    if (this.connectContainerInfo) {
+      for (const contaienrId of Object.keys(this.connectContainerInfo)) {
+        podCnt += Object.keys(this.connectContainerInfo[contaienrId]).length;
+      }
+    }
+    log.debug(`[+] intervalPodInfoCheck podCnt: ${podCnt}`);
+    const podInfoList = await this.k8sApi.getAllPodInfoList()
+      .catch((_) => []);
+
     const promiseList = [];
     const containerInfo = {};
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
@@ -693,6 +740,7 @@ export default class WorkerBase {
             this.workerInfo.clusterName, containerId,
             podId,
           ));
+          delete this.connectContainerInfo[containerId][podId];
         }
       }
     }
@@ -707,4 +755,62 @@ export default class WorkerBase {
 
     await Promise.all(promiseList);
   }
+
+  public initContainerForDocker = async () => {
+    const containerInfoInDb = await this.connectSdk.getAllContainersForDocker(
+      this.workerInfo.clusterName,
+    );
+    if (containerInfoInDb) {
+      for (const containerId of Object.keys(containerInfoInDb)) {
+        try {
+          await this.dockerApi.setContainerInfo(containerId);
+        } catch (err) {
+          await this.connectSdk.deleteContainerStatusForDocker(
+            this.workerInfo.clusterName, containerId,
+          );
+        }
+      }
+    }
+  }
+
+  // For Docker
+  private deployForDocker = async (address: string,
+    params: ConnectSdk.types.DeployForDockerParams) => {
+    log.info(`[+] deployForDocker - address:${address}`);
+    const containerId = getRandomString();
+    await this.dockerApi.run(containerId, params.image, params.env, params.command, true);
+    const containerStatus = await this.dockerApi.getContainerInfo(containerId);
+    setTimeout(async () => {
+      await this.connectSdk.setContainerStatusForDocker({
+        containerStatus,
+        containerId,
+        clusterName: this.workerInfo.clusterName,
+      });
+    }, 3000);
+    return { containerId };
+  }
+
+  private undeployForDocker = async (address: string,
+    params: ConnectSdk.types.UndeployForDockerParams) => {
+    log.info(`[+] undeployForDocker - address:${address}`);
+    await this.dockerApi.kill(params.containerId);
+    await this.connectSdk.deleteContainerStatusForDocker(this.workerInfo.clusterName,
+      params.containerId);
+  }
+
+  private intervalWorkerInfoForDocker = async () => {
+    await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
+  };
+
+  private intervaContainerInfoForDocker = async () => {
+    const allContainerInfo = await this.dockerApi.getAllContainerInfo();
+    for (const [containerId, containerInfo] of Object.entries(allContainerInfo)) {
+      const containerStatus = containerInfo as ConnectSdk.types.ContainerStatusForDocker;
+      await this.connectSdk.setContainerStatusForDocker({
+        containerStatus,
+        containerId,
+        clusterName: this.workerInfo.clusterName,
+      });
+    }
+  };
 }
