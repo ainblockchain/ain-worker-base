@@ -62,7 +62,7 @@ export default class WorkerBase {
     k8sConfigPath?: string, test: boolean = false) {
     if (!test) {
       let config;
-      if (constants.FIREBASE_CONFIG_PATH) {
+      if (fs.existsSync(constants.FIREBASE_CONFIG_PATH)) {
         config = JSON.parse(String(fs.readFileSync(constants.FIREBASE_CONFIG_PATH)));
       }
       this.connectSdk = new ConnectSdk.Worker(

@@ -1,4 +1,6 @@
 import program from 'commander';
+import { generateMnemonic } from 'bip39';
+import * as fs from 'fs';
 import * as Types from './common/types';
 import * as constants from './common/constants';
 import Logger from './common/logger';
@@ -27,12 +29,23 @@ program.command('serve').action(async () => {
         username: constants.DOCKER_USERNAME,
       };
     }
+    let mnemonic;
+    if (!constants.MNEMONIC) {
+      // Update Env File (Add AIN_PRIVATE_KEY and AIN_ADDRESS).
+      mnemonic = generateMnemonic();
+      const newEnv = {
+        ...constants.ENV,
+        MNEMONIC: mnemonic,
+      };
+      fs.truncateSync(constants.ENV_PATH, 0);
+      fs.appendFileSync(constants.ENV_PATH, JSON.stringify(newEnv, null, 2));
+    }
     const worker = await Worker.getInstance({
       clusterName: constants.CLUSTER_NAME as string,
-      mnemonic: constants.MNEMONIC as string,
+      mnemonic: constants.MNEMONIC || mnemonic,
       dockerAuth,
     }, constants.NODE_ENV as Types.NODE_ENV,
-    constants.CONFIG_PATH as string, !!constants.TEST);
+    constants.CONFIG_PATH);
     if (constants.IS_DOCKER) {
       await worker.startForDocker();
     } else {
