@@ -1,7 +1,7 @@
 {
   "name": "@aindev/ain-worker-base",
-  "version": "0.0.1",
-  "description": "AIN Connect Worker Base",
+  "version": "1.0.0",
+  "description": "AIN Connect Resource Worker",
   "keywords": [
     "ainetwork",
     "ain",
@@ -28,24 +28,23 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@aindev/connect-sdk": "0.1.16",
-    "@kubernetes/client-node": "0.13.0",
-    "@types/dockerode": "^3.2.1",
-    "@types/node": "^12.0.1",
-    "@types/set-interval-async": "^1.0.0",
-    "@types/sinon": "^9.0.8",
-    "commander": "^6.2.0",
-    "dockerode": "^3.2.1",
-    "js-base64": "^3.5.2",
-    "queue-typescript": "^1.0.1",
-    "set-interval-async": "^1.0.33",
-    "sinon": "^9.2.0",
-    "winston": "^3.2.1"
+    "@kubernetes/client-node": "0.13.2",
+    "@slack/events-api": "3.0.0",
+    "@slack/web-api": "6.0.0",
+    "@types/dockerode": "3.2.2",
+    "@types/node": "12.0.1",
+    "@types/set-interval-async": "1.0.0",
+    "@types/sinon": "9.0.10",
+    "dockerode": "3.2.1",
+    "js-base64": "3.6.0",
+    "set-interval-async": "1.0.34",
+    "sinon": "9.2.4",
+    "winston": "3.3.3"
   },
   "scripts": {
     "test": "jest",
     "build": "./build.sh",
-    "start": "tsc && node dist/index.js serve",
+    "start": "tsc && node dist/index.js",
     "lint": "eslint src/*.ts src/**/*.ts src/**/**/*.ts src/**/**/**/*.ts",
     "lint:fix": "eslint --fix src/*.ts src/**/*.ts src/**/**/*.ts src/**/**/**/*.ts"
   },
