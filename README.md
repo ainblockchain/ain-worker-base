@@ -13,6 +13,8 @@
 
 ## env.sample.json
 - type: Worker Type 으로  ‘inference’ | ‘training’ | ‘k8s’ | ‘docker' 이다. (required)
+- service: Worker 가 사용되는 서비스 이름 (required)
+- nodeEnv: prod or staging (required)
 - ethAddress: payout 할 이더리움 주소이다. (type: ‘inference’ or ‘training’ 인 경우만 required)
 - sharedDirPath: type 이 ‘training’ 인 경우 학습 컨테이너와의 통신을 위한 디렉토리 경로 (type: ‘training’ 인 경우만 required)
 - gpuDeviceNumber: GPU 디바이스 넘버 (ex. 1,2,3)
@@ -21,6 +23,7 @@
   - username
   - password
   - server
+- slack_webhook_url: log.error() 메시지를 슬랙 웹훅으로 노티하고 싶은 경우 필요한 정보.
 
 ## 코드 실행
 ```
