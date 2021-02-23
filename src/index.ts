@@ -19,7 +19,6 @@ program.command('serve').action(async () => {
     log.error('[-] Invalid Constants');
     return;
   }
-  log.info('[+] Start Worker.');
   try {
     let dockerAuth;
     if (constants.DOCKER_SERVER && constants.DOCKER_USERNAME && constants.DOCKER_PASSWORD) {
@@ -40,7 +39,7 @@ program.command('serve').action(async () => {
       fs.truncateSync(constants.ENV_PATH, 0);
       fs.appendFileSync(constants.ENV_PATH, JSON.stringify(newEnv, null, 2));
     }
-    const worker = await Worker.getInstance({
+    const worker = Worker.getInstance({
       clusterName: constants.CLUSTER_NAME as string,
       mnemonic: constants.MNEMONIC || mnemonic,
       dockerAuth,
@@ -52,7 +51,7 @@ program.command('serve').action(async () => {
       await worker.startForK8s();
     }
   } catch (err) {
-    log.error(err);
+    log.error(`[-] Failed to start Worker - ${err.message}`);
   }
 });
 

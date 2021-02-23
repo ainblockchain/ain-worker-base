@@ -1,7 +1,4 @@
 import * as fs from 'fs';
-import Logger from './logger';
-
-const log = Logger.createLogger('common/constants');
 
 export const ENV_PATH = './env.json';
 
@@ -9,7 +6,8 @@ let env;
 try {
   env = JSON.parse(String(fs.readFileSync(ENV_PATH)));
 } catch (err) {
-  log.error('[-] Failed to load env file.');
+  // eslint-disable-next-line no-console
+  console.log('[-] Failed to load env file.');
 }
 
 export const {
@@ -19,6 +17,7 @@ export const {
   DOCKER_PASSWORD,
   DOCKER_SERVER,
   IS_DOCKER,
+  SLACK_WEBHOOK_URL,
 } = env;
 export const ENV = env;
 

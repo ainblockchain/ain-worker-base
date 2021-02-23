@@ -250,7 +250,7 @@ export default class WorkerBase {
   */
   protected deploy = async (
     address: string, params: ConnectSdk.types.DeployParams) => {
-    log.info(`[+] deploy [namespaceId: ${params.namespaceId}]`);
+    log.debug(`[+] deploy [namespaceId: ${params.namespaceId}]`);
     const containerId = getRandomString();
     const baseEndpoint = this.endpoint.replace('*', containerId);
     const ports = params.containerInfo.port;
@@ -335,7 +335,7 @@ export default class WorkerBase {
    * Delete Deployment, Service and VirtualService.
   */
   protected undeploy = async (address: string, params: ConnectSdk.types.UndeployParams) => {
-    log.info(`[+] undeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
+    log.debug(`[+] undeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
     const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
       [WorkerBase.k8sConstants.addressLabalName]: address,
     });
@@ -352,7 +352,7 @@ export default class WorkerBase {
       }
       return {};
     } catch (err) {
-      log.error(`[-] Failed to undeploy ${err}`);
+      log.error(`[-] Failed to undeploy ${err.message}`);
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -361,7 +361,7 @@ export default class WorkerBase {
    * Configrate Deployment. (Env, Replicas, ImagePath)
   */
   protected redeploy = async (address: string, params: ConnectSdk.types.RedeployParams) => {
-    log.info(`[+] redeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
+    log.debug(`[+] redeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
     const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
       [WorkerBase.k8sConstants.addressLabalName]: address,
     });
@@ -383,7 +383,7 @@ export default class WorkerBase {
   */
   protected createNamespace = async (address: string,
     _: ConnectSdk.types.CreateNamespaceParams) => {
-    log.info('[+] createNamespace');
+    log.debug('[+] createNamespace');
     const namespaceId = getRandomString();
     try {
       const namespaceJson = K8sUtil.Template.getNamespace(namespaceId, {
@@ -407,7 +407,7 @@ export default class WorkerBase {
 
       return { namespaceId };
     } catch (err) {
-      log.error(`[-] failed to create Namespace - ${err.body.message}`);
+      log.error(`[-] Failed to create Namespace - ${err.body.message}`);
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -417,7 +417,7 @@ export default class WorkerBase {
   */
   protected deleteNamespace = async (address: string,
     params: ConnectSdk.types.DeleteNamespaceParams) => {
-    log.info(`[+] deleteNamespace [namespaceId: ${params.namespaceId}]`);
+    log.debug(`[+] deleteNamespace [namespaceId: ${params.namespaceId}]`);
     const isAuth = await this.k8sApi.isSelectLabel('namespace', params.namespaceId, undefined, {
       [WorkerBase.k8sConstants.addressLabalName]: address,
     });
@@ -428,7 +428,7 @@ export default class WorkerBase {
       await this.k8sApi.deleteResource('namespace', params.namespaceId);
       return {};
     } catch (err) {
-      log.error(`[-] failed to delete Namespace - ${err.message}`);
+      log.error(`[-] Failed to delete Namespace - ${err.message}`);
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -439,7 +439,7 @@ export default class WorkerBase {
   */
   protected createStorage = async (address: string, params: ConnectSdk.types.CreateStorageParams):
   Promise<ConnectSdk.types.CreateStorageReturn> => {
-    log.info(`[+] createStorage [namespaceId: ${params.namespaceId}, address: ${address}] `);
+    log.debug(`[+] createStorage [namespaceId: ${params.namespaceId}, address: ${address}] `);
 
     try {
       const storageId = getRandomString();
@@ -480,7 +480,7 @@ export default class WorkerBase {
   */
   protected deleteStorage = async (address: string,
     params: ConnectSdk.types.DeleteStorageParams) => {
-    log.info(`[+] deleteStorage [namespaceId: ${params.namespaceId}] storageId: ${params.storageId}`);
+    log.debug(`[+] deleteStorage [namespaceId: ${params.namespaceId}] storageId: ${params.storageId}`);
     const isAuth = await this.k8sApi.isSelectLabel('pvc', params.storageId, params.namespaceId, {
       [WorkerBase.k8sConstants.addressLabalName]: address,
     });
@@ -502,7 +502,7 @@ export default class WorkerBase {
   */
   protected getContainerLog = async (address: string,
     params: ConnectSdk.types.GetContainerLogParams) => {
-    log.info(`[+] getContainerLog [namespaceId: ${params.namespaceId}] containerId: ${params.containerId}`);
+    log.debug(`[+] getContainerLog [namespaceId: ${params.namespaceId}] containerId: ${params.containerId}`);
     const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
       [WorkerBase.k8sConstants.addressLabalName]: address,
     });
@@ -582,7 +582,7 @@ export default class WorkerBase {
         clusterName: this.workerInfo.clusterName,
       });
     } catch (err) {
-      log.error(`[-] Failed to get NodeInfo ${err}`);
+      log.error(`[-] Failed to get NodeInfo ${err.message}`);
     }
   }
 
@@ -648,7 +648,7 @@ export default class WorkerBase {
         await this.writePodStatus(data);
       }
     } catch (err) {
-      log.error(err);
+      log.error(`[-] Failed to Writer Pod Status - ${err.message}`);
     }
   }
 
@@ -776,7 +776,7 @@ export default class WorkerBase {
   // For Docker
   private deployForDocker = async (address: string,
     params: ConnectSdk.types.DeployForDockerParams) => {
-    log.info(`[+] deployForDocker - address:${address}`);
+    log.debug(`[+] deployForDocker - address:${address}`);
     const containerId = getRandomString();
     await this.dockerApi.run(containerId, params.image, params.env, params.command, true);
     const containerStatus = await this.dockerApi.getContainerInfo(containerId);
@@ -792,7 +792,7 @@ export default class WorkerBase {
 
   private undeployForDocker = async (address: string,
     params: ConnectSdk.types.UndeployForDockerParams) => {
-    log.info(`[+] undeployForDocker - address:${address}`);
+    log.debug(`[+] undeployForDocker - address:${address}`);
     await this.dockerApi.kill(params.containerId);
     await this.connectSdk.deleteContainerStatusForDocker(this.workerInfo.clusterName,
       params.containerId);
