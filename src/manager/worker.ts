@@ -648,7 +648,7 @@ export default class WorkerBase {
         await this.writePodStatus(data);
       }
     } catch (err) {
-      log.error(`[-] Failed to Writer Pod Status - ${err.message}`);
+      log.error(`[-] Failed to write Pod Status - ${err.message}`);
     }
   }
 

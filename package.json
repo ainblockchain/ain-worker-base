@@ -40,7 +40,8 @@
     "queue-typescript": "^1.0.1",
     "set-interval-async": "^1.0.33",
     "sinon": "^9.2.0",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "winston-slack-webhook-transport": "^2.0.1"
   },
   "scripts": {
     "test": "jest",
