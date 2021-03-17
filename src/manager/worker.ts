@@ -44,6 +44,8 @@ export default class WorkerBase {
 
   static podWriteTime = 10000;
 
+  static workerForHealthCheckTime = 5000;
+
   static containerWriteTime = 5000; // Lebel Name for selecting AIN Connect resource.
 
   protected nodeLimits: { // Node resource Limits
@@ -111,6 +113,7 @@ export default class WorkerBase {
     await this.initMaxDurationTimer();
     // Start to get node Information.
     setIntervalAsync(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
+    setIntervalAsync(this.intervalHealth, WorkerBase.workerForHealthCheckTime);
     setIntervalAsync(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
     // Start to get Pod Information.
     // Start to listen SDK Request.
@@ -542,6 +545,17 @@ export default class WorkerBase {
     return limits;
   }
 
+  protected intervalHealth = async () => {
+    try {
+      await this.connectSdk.setClusterStatus({
+        nodePool: {},
+        clusterName: this.workerInfo.clusterName,
+      });
+    } catch (err) {
+      log.debug(`[-] Failed to Set Worker info ${err.message}`);
+    }
+  }
+
   /**
    * Write Node Information to redis using k8s Pod and k8s Node Information.
   */
@@ -582,7 +596,7 @@ export default class WorkerBase {
         clusterName: this.workerInfo.clusterName,
       });
     } catch (err) {
-      log.error(`[-] Failed to get NodeInfo ${err.message}`);
+      log.debug(`[-] Failed to get NodeInfo ${err.message}`);
     }
   }
 
