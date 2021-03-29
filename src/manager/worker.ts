@@ -40,9 +40,9 @@ export default class WorkerBase {
 
   protected maxDurationTimer: any;
 
-  static workerInfoWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
+  protected currentNodePoolDict: types.NodePool;
 
-  static podWriteTime = 10000;
+  static workerInfoWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
 
   static workerForHealthCheckTime = 5000;
 
@@ -114,7 +114,7 @@ export default class WorkerBase {
     // Start to get node Information.
     setIntervalAsync(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
     setIntervalAsync(this.intervalHealth, WorkerBase.workerForHealthCheckTime);
-    setIntervalAsync(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
+    this.watchPodInfos();
     // Start to get Pod Information.
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
@@ -548,7 +548,7 @@ export default class WorkerBase {
   protected intervalHealth = async () => {
     try {
       await this.connectSdk.setClusterStatus({
-        nodePool: {},
+        nodePool: this.currentNodePoolDict,
         clusterName: this.workerInfo.clusterName,
       });
     } catch (err) {
@@ -590,6 +590,7 @@ export default class WorkerBase {
           };
         }
       }
+      this.currentNodePoolDict = nodePoolDict;
       // Write Cluster Status with Node Info to Redis.
       await this.connectSdk.setClusterStatus({
         nodePool: nodePoolDict,
@@ -696,8 +697,8 @@ export default class WorkerBase {
   /**
    * Start to Watch Pod Information.
   */
-  protected async watchPodInfos() {
-    await this.k8sApi.watchPod(
+  protected watchPodInfos() {
+    this.k8sApi.makeInformerPod(
       this.podUpdataOrAddCallback, // ADDED
       this.podUpdataOrAddCallback, // UPDATE
       this.podDeleteCallback, // DELETE
@@ -708,66 +709,6 @@ export default class WorkerBase {
         this.nodeLimits = {};
       },
     );
-  }
-
-  protected intervalPodInfoCheck = async () => {
-    let podCnt = 0;
-    if (this.connectContainerInfo) {
-      for (const contaienrId of Object.keys(this.connectContainerInfo)) {
-        podCnt += Object.keys(this.connectContainerInfo[contaienrId]).length;
-      }
-    }
-    log.debug(`[+] intervalPodInfoCheck podCnt: ${podCnt}`);
-    const podInfoList = await this.k8sApi.getAllPodInfoList()
-      .catch((_) => []);
-
-    const promiseList = [];
-    const containerInfo = {};
-    if (!this.connectContainerInfo) this.connectContainerInfo = {};
-
-    // Create
-    for (const podInfo of podInfoList) {
-      if (!containerInfo[podInfo.appName]) containerInfo[podInfo.appName] = {};
-      if (!containerInfo[podInfo.appName][podInfo.name]) {
-        containerInfo[podInfo.appName][podInfo.name] = podInfo;
-      }
-      if (!this.nodeLimits[podInfo.targetNodeName]) this.nodeLimits[podInfo.targetNodeName] = {};
-      this.nodeLimits[podInfo.targetNodeName][podInfo.name] = {
-        limits: podInfo.resourcelimits,
-        containerId: podInfo.appName,
-        ainConnect: !!(podInfo.labels && podInfo.labels.ainConnect),
-      };
-      if (this.nodeLimits[podInfo.targetNodeName][podInfo.name].ainConnect) {
-        const preData = (this.connectContainerInfo[podInfo.appName])
-          ? this.connectContainerInfo[podInfo.appName][podInfo.name] : undefined;
-        if (!preData || (preData.params.status.phase !== this.convertStatus(podInfo))) {
-          promiseList.push(this.writePodStatus(podInfo));
-        }
-      }
-    }
-
-    // Delete
-    for (const containerId of Object.keys(this.connectContainerInfo)) {
-      for (const podId of Object.keys(this.connectContainerInfo[containerId])) {
-        if (!(containerInfo[containerId] && containerInfo[containerId][podId])) {
-          promiseList.push(this.connectSdk.deletePodStatus(
-            this.workerInfo.clusterName, containerId,
-            podId,
-          ));
-          delete this.connectContainerInfo[containerId][podId];
-        }
-      }
-    }
-
-    for (const nodeName of Object.keys(this.nodeLimits)) {
-      for (const [podId, data] of Object.entries(this.nodeLimits[nodeName])) {
-        if (!(containerInfo[data.containerId] && containerInfo[data.containerId][podId])) {
-          delete this.nodeLimits[nodeName][podId];
-        }
-      }
-    }
-
-    await Promise.all(promiseList);
   }
 
   public initContainerForDocker = async () => {

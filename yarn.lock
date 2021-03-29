@@ -669,10 +669,10 @@
     "@types/istanbul-reports" "^1.1.1"
     "@types/yargs" "^13.0.0"
 
-"@kubernetes/client-node@0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@kubernetes/client-node/-/client-node-0.13.0.tgz#fb8e5559dacbfbb12f51ae2f3bfea166a0a60aee"
-  integrity sha512-gtsf/YG/mdi8BhIFbNA9BXxgwi3X6zYP0TKwqYaMm3hAlv320Awx8SpS1+ZjBVb6P8vRbDgzwApNVH22nDiB+A==
+"@kubernetes/client-node@0.13.2":
+  version "0.13.2"
+  resolved "https://registry.yarnpkg.com/@kubernetes/client-node/-/client-node-0.13.2.tgz#881eb407afbd5b499e5daf898ffcc40f839709e7"
+  integrity sha512-ufvGfjBXuy5LbZTJZ8bd1eRVgWUd9rRDCryMWNfxb4372Q60R1oG8qy7svUB9NqBmwFgKHuaXkrfq3rFFbGrew==
   dependencies:
     "@types/js-yaml" "^3.12.1"
     "@types/node" "^10.12.0"

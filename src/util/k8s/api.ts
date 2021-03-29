@@ -1,12 +1,15 @@
 import * as k8s from '@kubernetes/client-node';
 import { Base64 } from 'js-base64';
 import * as request from 'request';
+import * as http2 from 'http2';
 import * as types from '../../common/types';
 
 export default class Api {
   private config: k8s.KubeConfig;
 
   static instance: Api;
+
+  private informer: any; // For informer.stopped..
 
   constructor(configPath: string) {
     this.config = new k8s.KubeConfig();
@@ -666,44 +669,79 @@ export default class Api {
   /**
    * Watch Pod.
   */
-  async watchPod(
-    addCallback: (data: types.PodInfo) => void,
-    updateCallback: (data: types.PodInfo) => void,
-    deleteCallback: (data: types.PodInfo) => void,
+  makeInformerPod(
+    addCallback: (data: k8s.V1Pod) => void,
+    updateCallback: (data: k8s.V1Pod) => void,
+    deleteCallback: (data: k8s.V1Pod) => void,
     errorCallback: () => void,
   ) {
+    const http2Request = {
+      webRequest: (opts: any, _callback: any) => {
+        const connectionOptions = {};
+        this.config.applyToRequest(connectionOptions as any);
+
+        const url = new URL(opts.uri);
+        const host = `${url.protocol}//${url.host}`;
+
+        const http2ClientSession = http2.connect(host, { ca: connectionOptions['ca'] });
+
+        let path = '/api/v1/pods?watch=true';
+        if (opts && opts.qs && opts.qs.resourceVersion) {
+          path += `&resourceVersion=${opts.qs.resourceVersion}`;
+        }
+
+        const requestHeaders = { ':method': 'GET', ':path': path };
+        requestHeaders['Authorization'] = connectionOptions['headers'].Authorization;
+        const requestOptions = {
+          endStream: false,
+        };
+        const http2Stream = http2ClientSession.request(requestHeaders, requestOptions);
+        let count = 0;
+        const pingInterval = setInterval(() => {
+          let payload = count.toString().padStart(8, '0');
+          payload = payload.slice(payload.length - 8);
+          http2ClientSession.ping(Buffer.from(payload), (error, _duration, _payload) => {
+            if ((error || http2Stream.closed) && this.informer && !this.informer.stopped) {
+              this.informer.off('error', errorCallback);
+              this.informer.off('add', addCallback);
+              this.informer.off('update', updateCallback);
+              this.informer.off('delete', deleteCallback);
+              this.informer.stop();
+              clearInterval(pingInterval);
+              http2ClientSession.close();
+              if (!http2Stream.closed) {
+                http2Stream.emit('close');
+              }
+            }
+            count += 1;
+          });
+        }, 2000);
+        http2Stream.on('end', () => {
+          http2Stream.close();
+        });
+        return http2Stream;
+      },
+    };
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     const listFn = () => coreApi.listPodForAllNamespaces();
-    const informer = k8s.makeInformer(this.config, '/api/v1/pods', listFn);
+    const watch = new k8s.Watch(this.config, http2Request);
+    this.informer = new k8s.ListWatch('/api/v1/pods', watch, listFn, false);
 
-    informer.on('add', async (obj: k8s.V1Pod) => {
-      const podInfo = this.parsePodInfo(obj);
-      if (podInfo) {
-        await addCallback(podInfo);
+    this.informer.start();
+    this.informer.on('error', errorCallback);
+    this.informer.on('add', addCallback);
+    this.informer.on('update', updateCallback);
+    this.informer.on('delete', deleteCallback);
+
+    setInterval(() => {
+      if (this.informer && this.informer.stopped) {
+        this.informer.start();
+        this.informer.on('error', errorCallback);
+        this.informer.on('add', addCallback);
+        this.informer.on('update', addCallback);
+        this.informer.on('delete', deleteCallback);
       }
-    });
-    informer.on('update', async (obj: k8s.V1Pod) => {
-      const podInfo = this.parsePodInfo(obj);
-      if (podInfo) {
-        await updateCallback(podInfo);
-      }
-    });
-    informer.on('delete', async (obj: k8s.V1Pod) => {
-      const podInfo = this.parsePodInfo(obj);
-      if (podInfo) {
-        await deleteCallback(podInfo);
-      }
-    });
-    informer.on('error', async (err: k8s.V1Pod) => {
-      // eslint-disable-next-line no-console
-      console.log(err);
-      await errorCallback();
-      // Restart informer after 5sec
-      setTimeout(async () => {
-        await informer.start();
-      }, 5000);
-    });
-    await informer.start();
+    }, 15000);
   }
 
   /**
