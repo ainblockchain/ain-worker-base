@@ -675,6 +675,28 @@ export default class Api {
     deleteCallback: (data: k8s.V1Pod) => void,
     errorCallback: () => void,
   ) {
+    const addHandler = async (obj: any) => {
+      const podInfo = this.parsePodInfo(obj);
+      if (podInfo) {
+        await addCallback(podInfo);
+      }
+    };
+    const updateHandler = async (obj: any) => {
+      const podInfo = this.parsePodInfo(obj);
+      if (podInfo) {
+        await updateCallback(podInfo);
+      }
+    };
+    const deleteHandler = async (obj: any) => {
+      const podInfo = this.parsePodInfo(obj);
+      if (podInfo) {
+        await deleteCallback(podInfo);
+      }
+    };
+    const errorHandler = async () => {
+      await errorCallback();
+    };
+
     const http2Request = {
       webRequest: (opts: any, _callback: any) => {
         const connectionOptions = {};
@@ -702,10 +724,10 @@ export default class Api {
           payload = payload.slice(payload.length - 8);
           http2ClientSession.ping(Buffer.from(payload), (error, _duration, _payload) => {
             if ((error || http2Stream.closed) && this.informer && !this.informer.stopped) {
-              this.informer.off('error', errorCallback);
-              this.informer.off('add', addCallback);
-              this.informer.off('update', updateCallback);
-              this.informer.off('delete', deleteCallback);
+              this.informer.off('error', errorHandler);
+              this.informer.off('add', addHandler);
+              this.informer.off('update', updateHandler);
+              this.informer.off('delete', deleteHandler);
               this.informer.stop();
               clearInterval(pingInterval);
               http2ClientSession.close();
@@ -728,18 +750,18 @@ export default class Api {
     this.informer = new k8s.ListWatch('/api/v1/pods', watch, listFn, false);
 
     this.informer.start();
-    this.informer.on('error', errorCallback);
-    this.informer.on('add', addCallback);
-    this.informer.on('update', updateCallback);
-    this.informer.on('delete', deleteCallback);
+    this.informer.on('error', errorHandler);
+    this.informer.on('add', addHandler);
+    this.informer.on('update', updateHandler);
+    this.informer.on('delete', deleteHandler);
 
     setInterval(() => {
       if (this.informer && this.informer.stopped) {
         this.informer.start();
-        this.informer.on('error', errorCallback);
-        this.informer.on('add', addCallback);
-        this.informer.on('update', addCallback);
-        this.informer.on('delete', deleteCallback);
+        this.informer.on('error', errorHandler);
+        this.informer.on('add', addHandler);
+        this.informer.on('update', updateHandler);
+        this.informer.on('delete', deleteHandler);
       }
     }, 15000);
   }

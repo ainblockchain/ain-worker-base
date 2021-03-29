@@ -648,7 +648,6 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status}`);
     try {
       // Stores all pod information for each node.
       if (!this.nodeLimits[data.targetNodeName]) {
@@ -660,6 +659,7 @@ export default class WorkerBase {
         ainConnect: !!(data.labels && data.labels.ainConnect),
       };
       if (this.nodeLimits[data.targetNodeName][data.name].ainConnect) {
+        log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
         await this.writePodStatus(data);
       }
     } catch (err) {
