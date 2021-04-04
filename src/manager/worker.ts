@@ -54,6 +54,7 @@ export default class WorkerBase {
         limits: ConnectSdk.types.NodeInfo,
         containerId: string,
         ainConnect: boolean,
+        phase: string,
       };
     }
   }
@@ -618,19 +619,33 @@ export default class WorkerBase {
 
   protected writePodStatus = async (data: types.PodInfo) => {
     const phase = this.convertStatus(data);
-    await this.connectSdk.setPodStatus({
-      clusterName: this.workerInfo.clusterName,
+    let changed = true;
+    if (this.nodeLimits[data.targetNodeName][data.name]) {
+      const { phase: prePhase } = this.nodeLimits[data.targetNodeName][data.name];
+      if (prePhase === phase) changed = false;
+    }
+    this.nodeLimits[data.targetNodeName][data.name] = {
+      limits: data.resourcelimits,
       containerId: data.appName,
-      podId: data.name,
-      podStatus: {
-        podName: data.name,
-        namespaceId: data.namespaceId,
-        status: {
-          phase,
+      ainConnect: !!(data.labels && data.labels.ainConnect),
+      phase,
+    };
+    if (changed) {
+      log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
+      await this.connectSdk.setPodStatus({
+        clusterName: this.workerInfo.clusterName,
+        containerId: data.appName,
+        podId: data.name,
+        podStatus: {
+          podName: data.name,
+          namespaceId: data.namespaceId,
+          status: {
+            phase,
+          },
+          image: data.image,
         },
-        image: data.image,
-      },
-    });
+      });
+    }
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
     if (!this.connectContainerInfo[data.appName]) this.connectContainerInfo[data.appName] = {};
     this.connectContainerInfo[data.appName][data.name] = {
@@ -653,12 +668,7 @@ export default class WorkerBase {
       if (!this.nodeLimits[data.targetNodeName]) {
         this.nodeLimits[data.targetNodeName] = {};
       }
-      this.nodeLimits[data.targetNodeName][data.name] = {
-        limits: data.resourcelimits,
-        containerId: data.appName,
-        ainConnect: !!(data.labels && data.labels.ainConnect),
-      };
-      if (this.nodeLimits[data.targetNodeName][data.name].ainConnect) {
+      if (data.labels && data.labels.ainConnect) {
         log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
         await this.writePodStatus(data);
       }

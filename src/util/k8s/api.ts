@@ -701,17 +701,13 @@ export default class Api {
       webRequest: (opts: any, _callback: any) => {
         const connectionOptions = {};
         this.config.applyToRequest(connectionOptions as any);
-
         const url = new URL(opts.uri);
         const host = `${url.protocol}//${url.host}`;
-
         const http2ClientSession = http2.connect(host, { ca: connectionOptions['ca'] });
-
         let path = '/api/v1/pods?watch=true';
         if (opts && opts.qs && opts.qs.resourceVersion) {
           path += `&resourceVersion=${opts.qs.resourceVersion}`;
         }
-
         const requestHeaders = { ':method': 'GET', ':path': path };
         requestHeaders['Authorization'] = connectionOptions['headers'].Authorization;
         const requestOptions = {
@@ -722,24 +718,31 @@ export default class Api {
         const pingInterval = setInterval(() => {
           let payload = count.toString().padStart(8, '0');
           payload = payload.slice(payload.length - 8);
+          if (http2Stream.closed || http2Stream.destroyed) {
+            if (!http2Stream.closed) {
+              http2Stream.emit('close');
+            }
+            return;
+          }
           http2ClientSession.ping(Buffer.from(payload), (error, _duration, _payload) => {
-            if ((error || http2Stream.closed) && this.informer && !this.informer.stopped) {
-              this.informer.off('error', errorHandler);
-              this.informer.off('add', addHandler);
-              this.informer.off('update', updateHandler);
-              this.informer.off('delete', deleteHandler);
-              this.informer.stop();
-              clearInterval(pingInterval);
-              http2ClientSession.close();
+            if ((error || http2Stream.closed
+              || http2Stream.destroyed) && this.informer && !this.informer.stopped) {
               if (!http2Stream.closed) {
                 http2Stream.emit('close');
               }
             }
             count += 1;
           });
-        }, 2000);
+        }, 5000);
+
         http2Stream.on('end', () => {
-          http2Stream.close();
+          clearInterval(pingInterval);
+          http2ClientSession.close();
+          this.informer.off('error', errorHandler);
+          this.informer.off('add', addHandler);
+          this.informer.off('update', updateHandler);
+          this.informer.off('delete', deleteHandler);
+          this.informer.stop();
         });
         return http2Stream;
       },
@@ -755,9 +758,14 @@ export default class Api {
     this.informer.on('update', updateHandler);
     this.informer.on('delete', deleteHandler);
 
-    setInterval(() => {
+    setInterval(async () => {
       if (this.informer && this.informer.stopped) {
-        this.informer.start();
+        try {
+          await this.informer.start();
+        } catch (err) {
+          this.informer.stop();
+          return;
+        }
         this.informer.on('error', errorHandler);
         this.informer.on('add', addHandler);
         this.informer.on('update', updateHandler);
