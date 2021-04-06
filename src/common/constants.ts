@@ -2,13 +2,7 @@ import * as fs from 'fs';
 
 export const ENV_PATH = './env.json';
 
-let env;
-try {
-  env = JSON.parse(String(fs.readFileSync(ENV_PATH)));
-} catch (err) {
-  // eslint-disable-next-line no-console
-  console.log('[-] Failed to load env file.');
-}
+const env = fs.existsSync(ENV_PATH) ? JSON.parse(String(fs.readFileSync(ENV_PATH))) : {};
 
 export const {
   CLUSTER_NAME,

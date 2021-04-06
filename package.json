@@ -37,6 +37,7 @@
     "commander": "^6.2.0",
     "dockerode": "^3.2.1",
     "js-base64": "^3.5.2",
+    "moment-timezone": "^0.5.33",
     "queue-typescript": "^1.0.1",
     "set-interval-async": "^1.0.33",
     "sinon": "^9.2.0",

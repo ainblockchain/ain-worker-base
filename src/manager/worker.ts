@@ -137,7 +137,7 @@ export default class WorkerBase {
   async startForDocker() {
     await this.initContainerForDocker();
     setIntervalAsync(this.intervalWorkerInfoForDocker, WorkerBase.workerInfoWriteTime);
-    setIntervalAsync(this.intervaContainerInfoForDocker, WorkerBase.containerWriteTime);
+    setIntervalAsync(this.intervalContainerInfoForDocker, WorkerBase.containerWriteTime);
     await this.connectSdk.listenRequest({
       deployForDocker: this.deployForDocker,
       undeployForDocker: this.undeployForDocker,
@@ -623,6 +623,7 @@ export default class WorkerBase {
     if (this.nodeLimits[data.targetNodeName][data.name]) {
       const { phase: prePhase } = this.nodeLimits[data.targetNodeName][data.name];
       if (prePhase === phase) changed = false;
+      log.debug(`[+] setPodStatus podName: ${data.appName} - ${prePhase} -> ${phase}`);
     }
     this.nodeLimits[data.targetNodeName][data.name] = {
       limits: data.resourcelimits,
@@ -767,7 +768,7 @@ export default class WorkerBase {
     await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
   };
 
-  private intervaContainerInfoForDocker = async () => {
+  private intervalContainerInfoForDocker = async () => {
     const allContainerInfo = await this.dockerApi.getAllContainerInfo();
     for (const [containerId, containerInfo] of Object.entries(allContainerInfo)) {
       const containerStatus = containerInfo as ConnectSdk.types.ContainerStatusForDocker;
