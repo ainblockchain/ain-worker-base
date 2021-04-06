@@ -20,7 +20,7 @@ const transports = (constants.SLACK_WEBHOOK_URL) ? [
           fields: [
             {
               title: `${info.level} Message`,
-              value: `${info.timestamp} [${info.label}] ${info.message}`,
+              value: `${moment().tz('Asia/Seoul').format()} [${info.label}] ${info.message}`,
               short: false,
             },
           ],
