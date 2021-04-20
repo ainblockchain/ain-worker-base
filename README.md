@@ -22,7 +22,6 @@ docker run -d --name worker-k8s -v {/PATH/TO/CONFIG}:/server/env.json -v {k8s co
 docker run -d --name worker-docker -v {/PATH/TO/CONFIG}:/server/env.json -v /var/run/docker.sock:/var/run/docker.sock ainblockchain/ain-connect-base:<TAG>
 ```
 - /PATH/TO/CONFIG에 env.sample.json을 참고하여 파일을 생성한다.
-- firebase를 변경하고 싶다면, FIREBASE_CONFIG_PATH를 환경변수로 추가한다.(-v $PWD/firebase.json:/server/firebase.json -e FIREBASE_CONFIG_PATH="./firebase.json")
 
 ## 유닛 테스트 실행
 ```

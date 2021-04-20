@@ -21,11 +21,11 @@ program.command('serve').action(async () => {
   }
   try {
     let dockerAuth;
-    if (constants.DOCKER_SERVER && constants.DOCKER_USERNAME && constants.DOCKER_PASSWORD) {
+    if (constants.REGISTRY_SERVER && constants.REGISTRY_USERNAME && constants.REGISTRY_PASSWORD) {
       dockerAuth = {
-        server: constants.DOCKER_SERVER,
-        password: constants.DOCKER_PASSWORD,
-        username: constants.DOCKER_USERNAME,
+        server: constants.REGISTRY_SERVER,
+        password: constants.REGISTRY_PASSWORD,
+        username: constants.REGISTRY_USERNAME,
       };
     }
     let mnemonic;
@@ -45,7 +45,7 @@ program.command('serve').action(async () => {
       dockerAuth,
     }, constants.NODE_ENV as Types.NODE_ENV,
     constants.CONFIG_PATH);
-    if (constants.IS_DOCKER) {
+    if (constants.IS_DOCKER.toLowerCase() === 'true') {
       await worker.startForDocker();
     } else {
       await worker.startForK8s();

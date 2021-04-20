@@ -7,9 +7,9 @@ const env = fs.existsSync(ENV_PATH) ? JSON.parse(String(fs.readFileSync(ENV_PATH
 export const {
   CLUSTER_NAME,
   MNEMONIC,
-  DOCKER_USERNAME,
-  DOCKER_PASSWORD,
-  DOCKER_SERVER,
+  REGISTRY_USERNAME,
+  REGISTRY_PASSWORD,
+  REGISTRY_SERVER,
   IS_DOCKER,
   SLACK_WEBHOOK_URL,
 } = env;
