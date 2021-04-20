@@ -104,11 +104,13 @@ export default class WorkerBase {
    * Start Worker for Kubernetes.
   */
   async startForK8s() {
-    // For network Policy.
-    await this.k8sApi.addLabelNamespace('istio-system', {
-      worker: 'yes',
-    });
     await this.setEndpoint();
+    if (this.endpoint) {
+      // For network Policy.
+      await this.k8sApi.addLabelNamespace('istio-system', {
+        worker: 'yes',
+      });
+    }
     await this.initPodInfo();
     await this.initStorageInfo();
     await this.initMaxDurationTimer();
