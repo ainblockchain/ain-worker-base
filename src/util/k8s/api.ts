@@ -236,16 +236,19 @@ export default class Api {
     return new Promise<string[]>((resolve, reject) => {
       request.get(url, opts,
         (error, _response, _body) => {
-          const json = JSON.parse(_body);
-          if (json.spec) {
-            const hosts = json.spec.servers.map((item: any) => item.hosts[0]);
-            resolve(hosts);
-          } else {
-            reject(json.reason);
-          }
-
-          if (error) {
-            reject(error);
+          try {
+            const json = JSON.parse(_body);
+            if (json.spec) {
+              const hosts = json.spec.servers.map((item: any) => item.hosts[0]);
+              resolve(hosts);
+            } else {
+              reject(json.reason);
+            }
+            if (error) {
+              reject(error);
+            }
+          } catch (err) {
+            reject(err);
           }
         });
     });
