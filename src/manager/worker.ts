@@ -631,7 +631,17 @@ export default class WorkerBase {
       ainConnect: !!(data.labels && data.labels.ainConnect),
       phase,
     };
-    if (changed) {
+    if (changed && phase !== 'createContainer') {
+      let condition;
+      if (data.status.containerStatuses && data.status.containerStatuses[0].state?.waiting) {
+        const waitingInfo = data.status.containerStatuses[0].state?.waiting;
+        condition = {
+          type: 'ContainersReady' as 'ContainersReady',
+          status: false,
+          reason: waitingInfo.reason,
+          message: waitingInfo.message,
+        };
+      }
       log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
       await this.connectSdk.setPodStatus({
         clusterName: this.workerInfo.clusterName,
@@ -642,6 +652,7 @@ export default class WorkerBase {
           namespaceId: data.namespaceId,
           status: {
             phase,
+            condition,
           },
           image: data.image,
         },

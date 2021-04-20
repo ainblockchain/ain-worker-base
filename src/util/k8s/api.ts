@@ -404,22 +404,9 @@ export default class Api {
     const res = await coreApi.listNamespacedPod(
       namespace, undefined, undefined, undefined, undefined, `app=${appName}`,
     );
-    const podInfo = res.body.items[0];
-    if (podInfo && podInfo.status && podInfo.spec && podInfo.metadata) {
-      const containerInfo = podInfo.spec.containers[0];
-      const port = {};
-      if (containerInfo.ports) {
-        for (const portInfo of containerInfo.ports) {
-          port[portInfo.containerPort] = portInfo.protocol;
-        }
-      }
-      return {
-        podName: podInfo.metadata.name,
-        resourceStatus: podInfo.status.phase || 'Unknown',
-        containerImage: containerInfo.image,
-        env: containerInfo.env,
-        port,
-      };
+    const podInfo = this.parsePodInfo(res.body);
+    if (podInfo) {
+      return podInfo;
     }
     throw new Error('Failed to get Pod Info.');
   }
@@ -782,8 +769,8 @@ export default class Api {
   getContainerLog = async (appName: string, namespace: string, sinceSeconds?: number) => {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     const podInfo = await this.getPodInfobyAppName(appName, namespace);
-    if (podInfo.podName) {
-      const result = await coreApi.readNamespacedPodLog(podInfo.podName, namespace,
+    if (podInfo.name) {
+      const result = await coreApi.readNamespacedPodLog(podInfo.name, namespace,
         undefined, undefined, undefined, undefined, undefined,
         undefined, sinceSeconds, undefined, true);
       return result.body;
