@@ -793,18 +793,26 @@ export default class WorkerBase {
   }
 
   private intervalWorkerInfoForDocker = async () => {
-    await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
+    try {
+      await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
+    } catch (err) {
+      log.error(`[-] intervalWorkerInfoForDocker - ${err.message}`);
+    }
   };
 
   private intervalContainerInfoForDocker = async () => {
     const allContainerInfo = await this.dockerApi.getAllContainerInfo();
     for (const [containerId, containerInfo] of Object.entries(allContainerInfo)) {
       const containerStatus = containerInfo as ConnectSdk.types.ContainerStatusForDocker;
-      await this.connectSdk.setContainerStatusForDocker({
-        containerStatus,
-        containerId,
-        clusterName: this.workerInfo.clusterName,
-      });
+      try {
+        await this.connectSdk.setContainerStatusForDocker({
+          containerStatus,
+          containerId,
+          clusterName: this.workerInfo.clusterName,
+        });
+      } catch (err) {
+        log.error(`[-] intervalContainerInfoForDocker - ${err.message}`);
+      }
     }
   };
 }
