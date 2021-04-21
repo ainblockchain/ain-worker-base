@@ -321,7 +321,7 @@ export default class WorkerBase {
       const endpoint = {};
       if (isNodePort) {
         for (const portInfo of result['spec']['ports']) {
-          endpoint[portInfo.port] = `${result['spec']['clusterIP']}:${portInfo.nodePort}`;
+          endpoint[portInfo.port] = `${constants.NODE_PORT_IP}:${portInfo.nodePort}`;
         }
       } else {
         // Create VirtualService per extenal Port.
