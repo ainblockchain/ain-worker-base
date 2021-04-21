@@ -29,9 +29,9 @@
 ## 도커로 시작
 ```
 // For K8s
-docker run -d --name worker-k8s -v {/PATH/TO/CONFIG}:/server/env.json -v {k8s config path}:/server/config.yaml ainblockchain/ain-connect-base:<TAG>
+docker run -d --name worker-k8s -v {/PATH/TO/CONFIG}:/worker/env.json -v {k8s config path}:/worker/config.yaml ainblockchain/ain-connect-base:<TAG>
 // For Docker
-docker run -d --name worker-docker -v {/PATH/TO/CONFIG}:/server/env.json -v /var/run/docker.sock:/var/run/docker.sock ainblockchain/ain-connect-base:<TAG>
+docker run -d --name worker-docker -v {/PATH/TO/CONFIG}:/worker/env.json -v /var/run/docker.sock:/var/run/docker.sock ainblockchain/ain-connect-base:<TAG>
 ```
 - /PATH/TO/CONFIG에 env.sample.json을 참고하여 파일을 생성한다.
 
