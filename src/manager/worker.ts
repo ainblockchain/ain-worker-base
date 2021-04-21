@@ -36,7 +36,7 @@ export default class WorkerBase {
 
   protected workerInfo: types.WorkerInfo;
 
-  protected endpoint: string;
+  protected istioEndpoint: string;
 
   protected maxDurationTimer: any;
 
@@ -105,11 +105,13 @@ export default class WorkerBase {
   */
   async startForK8s() {
     await this.setEndpoint();
-    if (this.endpoint) {
+    if (this.istioEndpoint) {
       // For network Policy.
       await this.k8sApi.addLabelNamespace('istio-system', {
         worker: 'yes',
       });
+    } else if (!constants.NODE_PORT_IP) {
+      throw new Error('NODE_PORT_IP Not Exists');
     }
     await this.initPodInfo();
     await this.initStorageInfo();
@@ -151,7 +153,7 @@ export default class WorkerBase {
     try {
       const hosts = await this.k8sApi.getGatewayHosts(WorkerBase.k8sConstants.gatewayName,
         'istio-system');
-      [this.endpoint] = hosts;
+      [this.istioEndpoint] = hosts;
     } catch (_err) {
       log.info('[+] istio Gateway Not Exists');
     }
@@ -310,20 +312,21 @@ export default class WorkerBase {
       );
       await this.k8sApi.apply(deployJson);
 
-      const isNodePort = !this.endpoint;
+      const isNodePort = !this.istioEndpoint;
       // Create Service.
       const svcJson = K8sUtil.Template.getService(containerId,
         params.namespaceId, params.containerInfo.port, undefined, isNodePort);
       const result = await this.k8sApi.apply(svcJson);
 
       const endpoint = {};
-      // Create VirtualService per extenal Port.
-      for (const port of ports) {
-        if (isNodePort) {
-          endpoint[port] = `${result['spec']['clusterIP']}:${port}`;
-        } else {
-          // istio version.
-          const baseEndpoint = this.endpoint.replace('*', containerId);
+      if (isNodePort) {
+        for (const portInfo of result['spec']['ports']) {
+          endpoint[portInfo.port] = `${result['spec']['clusterIP']}:${portInfo.nodePort}`;
+        }
+      } else {
+        // Create VirtualService per extenal Port.
+        for (const port of ports) {
+          const baseEndpoint = this.istioEndpoint.replace('*', containerId);
           const subEndpoint = `${port}-${baseEndpoint}`;
           const vsJson = K8sUtil.Template.getVirtualService(`${containerId}${port}`,
             params.namespaceId, containerId, subEndpoint, `${WorkerBase.k8sConstants.gatewayName}.istio-system`, Number(port));
@@ -361,7 +364,9 @@ export default class WorkerBase {
     try {
       await this.k8sApi.deleteResource('deployment', params.containerId, params.namespaceId);
       await this.k8sApi.deleteResource('service', params.containerId, params.namespaceId);
-      await this.k8sApi.deleteResource('virtualService', params.containerId, params.namespaceId);
+      if (this.istioEndpoint) {
+        await this.k8sApi.deleteResource('virtualService', params.containerId, params.namespaceId);
+      }
       if (this.maxDurationTimer[params.containerId]) {
         clearTimeout(this.maxDurationTimer[params.containerId]);
         delete this.maxDurationTimer[params.containerId];

@@ -12,6 +12,7 @@ export const {
   REGISTRY_SERVER,
   IS_DOCKER,
   SLACK_WEBHOOK_URL,
+  NODE_PORT_IP,
 } = env;
 export const ENV = env;
 

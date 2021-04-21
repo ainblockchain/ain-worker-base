@@ -13,6 +13,18 @@
 
 <br>
 
+## env.json 작성
+```
+{
+  "CLUSTER_NAME": "", // 클러스터 별칭
+  "REGISTRY_USERNAME": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
+  "REGISTRY_PASSWORD": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
+  "REGISTRY_SERVER": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
+  "NODE_PORT_IP": "", // (optional) istio 없이 NodePort 로만 Endpoint 를 만드는 경우에 필요한 쿠버네티스 외부 IP.
+  "IS_DOCKER": "", // true 인 경우 도커 버전으로 워커를 시작함. (false 인 경우는 쿠버네티스 버전으로 시작.)
+  "STORAGE_CLASS": "" // (optional) PVC 생성할 때 사용되는 Storage Class.
+}
+```
 
 ## 도커로 시작
 ```

@@ -184,7 +184,12 @@ export default class Api {
     return new Promise((resolve, reject) => {
       request.delete(url, opts,
         (error, _response, _body) => {
-          const json = JSON.parse(_body);
+          let json;
+          try {
+            json = JSON.parse(_body);
+          } catch (err) {
+            reject(err);
+          }
           if (error) {
             reject(error);
           }
@@ -432,7 +437,12 @@ export default class Api {
           }
           try {
             const podInfos = [];
-            const jsonData = JSON.parse(_body);
+            let jsonData;
+            try {
+              jsonData = JSON.parse(_body);
+            } catch (err) {
+              reject(err);
+            }
             for (const item of jsonData.items) {
               const podInfo = this.parsePodInfo(item);
               if (podInfo) {
@@ -526,7 +536,12 @@ export default class Api {
             reject(error);
           }
           const storageInfos = [];
-          const jsonData = JSON.parse(_body);
+          let jsonData;
+          try {
+            jsonData = JSON.parse(_body);
+          } catch (err) {
+            reject(err);
+          }
           for (const item of jsonData.items) {
             if (item.metadata.labels && item.metadata.labels.app
               && (!selectLabel || (item.metadata.labels[selectLabel]))
