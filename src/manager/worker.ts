@@ -78,12 +78,12 @@ export default class WorkerBase {
     )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
-    if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() !== 'true' && k8sConfigPath) {
+    if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() === 'true') {
+      this.dockerApi = Docker.getInstance();
+    } else if (k8sConfigPath) {
       this.nodeLimits = {};
       this.connectContainerInfo = {};
       this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
-    } else {
-      this.dockerApi = Docker.getInstance();
     }
   }
 
@@ -154,8 +154,8 @@ export default class WorkerBase {
       const hosts = await this.k8sApi.getGatewayHosts(WorkerBase.k8sConstants.gatewayName,
         'istio-system');
       [this.istioEndpoint] = hosts;
-    } catch (_err) {
-      log.info('[+] istio Gateway Not Exists');
+    } catch (err) {
+      log.info(`[+] istio Gateway Not Exists - ${err}`);
     }
   }
 
