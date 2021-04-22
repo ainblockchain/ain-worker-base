@@ -45,7 +45,7 @@ program.command('serve').action(async () => {
       dockerAuth,
     }, constants.NODE_ENV as Types.NODE_ENV,
     constants.CONFIG_PATH);
-    if (constants.IS_DOCKER.toLowerCase() === 'true') {
+    if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() === 'true') {
       await worker.startForDocker();
     } else {
       await worker.startForK8s();

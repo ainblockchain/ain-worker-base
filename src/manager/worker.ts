@@ -78,7 +78,7 @@ export default class WorkerBase {
     )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
-    if (constants.IS_DOCKER.toLowerCase() !== 'true' && k8sConfigPath) {
+    if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() !== 'true' && k8sConfigPath) {
       this.nodeLimits = {};
       this.connectContainerInfo = {};
       this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
