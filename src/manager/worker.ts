@@ -660,20 +660,24 @@ export default class WorkerBase {
         };
       }
       log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
-      await this.connectSdk.setPodStatus({
-        clusterName: this.workerInfo.clusterName,
-        containerId: data.appName,
-        podId: data.name,
-        podStatus: {
-          podName: data.name,
-          namespaceId: data.namespaceId,
-          status: {
-            phase,
-            condition,
+      try {
+        await this.connectSdk.setPodStatus({
+          clusterName: this.workerInfo.clusterName,
+          containerId: data.appName,
+          podId: data.name,
+          podStatus: {
+            podName: data.name,
+            namespaceId: data.namespaceId,
+            status: {
+              phase,
+              condition,
+            },
+            image: data.image,
           },
-          image: data.image,
-        },
-      });
+        });
+      } catch (err) {
+        log.error(`[-] Failed to set pod status - ${err}`);
+      }
     }
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
     if (!this.connectContainerInfo[data.appName]) this.connectContainerInfo[data.appName] = {};
