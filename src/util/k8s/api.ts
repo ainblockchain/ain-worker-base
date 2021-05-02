@@ -638,11 +638,11 @@ export default class Api {
           value: config.replicas,
         });
       }
-      if (config.imagePath) {
+      if (config.imageName) {
         patch.push({
           op: 'replace',
           path: '/spec/template/spec/containers/0/image',
-          value: config.imagePath,
+          value: config.imageName,
         });
       }
 
