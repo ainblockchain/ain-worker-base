@@ -72,7 +72,7 @@ export type DockerAuthInfo = {
 export type DeploymentConfig = {
   env?: Object;
   replicas?: number;
-  imagePath?: string;
+  imageName?: string;
 }
 
 export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';

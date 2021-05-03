@@ -2,22 +2,17 @@ import * as fs from 'fs';
 
 export const ENV_PATH = './env.json';
 
-let env;
-try {
-  env = JSON.parse(String(fs.readFileSync(ENV_PATH)));
-} catch (err) {
-  // eslint-disable-next-line no-console
-  console.log('[-] Failed to load env file.');
-}
+const env = fs.existsSync(ENV_PATH) ? JSON.parse(String(fs.readFileSync(ENV_PATH))) : {};
 
 export const {
   CLUSTER_NAME,
   MNEMONIC,
-  DOCKER_USERNAME,
-  DOCKER_PASSWORD,
-  DOCKER_SERVER,
+  REGISTRY_USERNAME,
+  REGISTRY_PASSWORD,
+  REGISTRY_SERVER,
   IS_DOCKER,
   SLACK_WEBHOOK_URL,
+  NODE_PORT_IP,
 } = env;
 export const ENV = env;
 

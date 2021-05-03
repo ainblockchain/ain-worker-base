@@ -129,7 +129,7 @@ export default class Template {
    * @param labels: labels.
   */
   static getService(name: string, namespace: string,
-    ports: number[], labels?: {[key: string]: string }) {
+    ports: number[], labels?: {[key: string]: string }, isNodePort?: boolean) {
     const templateJson = {
       apiVersion: 'v1',
       kind: 'Service',
@@ -145,6 +145,10 @@ export default class Template {
         selector: { app: name },
       },
     };
+
+    if (isNodePort) {
+      templateJson.spec['type'] = 'NodePort';
+    }
 
     for (const port of ports) {
       templateJson.spec.ports.push({ name: `http-tcp${port}`, port, targetPort: port });

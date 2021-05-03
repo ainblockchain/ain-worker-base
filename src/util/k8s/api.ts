@@ -1,12 +1,15 @@
 import * as k8s from '@kubernetes/client-node';
 import { Base64 } from 'js-base64';
 import * as request from 'request';
+import * as http2 from 'http2';
 import * as types from '../../common/types';
 
 export default class Api {
   private config: k8s.KubeConfig;
 
   static instance: Api;
+
+  private informer: any; // For informer.stopped..
 
   constructor(configPath: string) {
     this.config = new k8s.KubeConfig();
@@ -181,7 +184,12 @@ export default class Api {
     return new Promise((resolve, reject) => {
       request.delete(url, opts,
         (error, _response, _body) => {
-          const json = JSON.parse(_body);
+          let json;
+          try {
+            json = JSON.parse(_body);
+          } catch (err) {
+            reject(err);
+          }
           if (error) {
             reject(error);
           }
@@ -233,16 +241,19 @@ export default class Api {
     return new Promise<string[]>((resolve, reject) => {
       request.get(url, opts,
         (error, _response, _body) => {
-          const json = JSON.parse(_body);
-          if (json.spec) {
-            const hosts = json.spec.servers.map((item: any) => item.hosts[0]);
-            resolve(hosts);
-          } else {
-            reject(json.reason);
-          }
-
-          if (error) {
-            reject(error);
+          try {
+            const json = JSON.parse(_body);
+            if (json.spec) {
+              const hosts = json.spec.servers.map((item: any) => item.hosts[0]);
+              resolve(hosts);
+            } else {
+              reject(json.reason);
+            }
+            if (error) {
+              reject(error);
+            }
+          } catch (err) {
+            reject(err);
           }
         });
     });
@@ -401,22 +412,9 @@ export default class Api {
     const res = await coreApi.listNamespacedPod(
       namespace, undefined, undefined, undefined, undefined, `app=${appName}`,
     );
-    const podInfo = res.body.items[0];
-    if (podInfo && podInfo.status && podInfo.spec && podInfo.metadata) {
-      const containerInfo = podInfo.spec.containers[0];
-      const port = {};
-      if (containerInfo.ports) {
-        for (const portInfo of containerInfo.ports) {
-          port[portInfo.containerPort] = portInfo.protocol;
-        }
-      }
-      return {
-        podName: podInfo.metadata.name,
-        resourceStatus: podInfo.status.phase || 'Unknown',
-        containerImage: containerInfo.image,
-        env: containerInfo.env,
-        port,
-      };
+    const podInfo = this.parsePodInfo(res.body);
+    if (podInfo) {
+      return podInfo;
     }
     throw new Error('Failed to get Pod Info.');
   }
@@ -439,7 +437,12 @@ export default class Api {
           }
           try {
             const podInfos = [];
-            const jsonData = JSON.parse(_body);
+            let jsonData;
+            try {
+              jsonData = JSON.parse(_body);
+            } catch (err) {
+              reject(err);
+            }
             for (const item of jsonData.items) {
               const podInfo = this.parsePodInfo(item);
               if (podInfo) {
@@ -533,7 +536,12 @@ export default class Api {
             reject(error);
           }
           const storageInfos = [];
-          const jsonData = JSON.parse(_body);
+          let jsonData;
+          try {
+            jsonData = JSON.parse(_body);
+          } catch (err) {
+            reject(err);
+          }
           for (const item of jsonData.items) {
             if (item.metadata.labels && item.metadata.labels.app
               && (!selectLabel || (item.metadata.labels[selectLabel]))
@@ -630,11 +638,11 @@ export default class Api {
           value: config.replicas,
         });
       }
-      if (config.imagePath) {
+      if (config.imageName) {
         patch.push({
           op: 'replace',
           path: '/spec/template/spec/containers/0/image',
-          value: config.imagePath,
+          value: config.imageName,
         });
       }
 
@@ -666,44 +674,109 @@ export default class Api {
   /**
    * Watch Pod.
   */
-  async watchPod(
-    addCallback: (data: types.PodInfo) => void,
-    updateCallback: (data: types.PodInfo) => void,
-    deleteCallback: (data: types.PodInfo) => void,
+  makeInformerPod(
+    addCallback: (data: k8s.V1Pod) => void,
+    updateCallback: (data: k8s.V1Pod) => void,
+    deleteCallback: (data: k8s.V1Pod) => void,
     errorCallback: () => void,
   ) {
-    const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
-    const listFn = () => coreApi.listPodForAllNamespaces();
-    const informer = k8s.makeInformer(this.config, '/api/v1/pods', listFn);
-
-    informer.on('add', async (obj: k8s.V1Pod) => {
+    const addHandler = async (obj: any) => {
       const podInfo = this.parsePodInfo(obj);
       if (podInfo) {
         await addCallback(podInfo);
       }
-    });
-    informer.on('update', async (obj: k8s.V1Pod) => {
+    };
+    const updateHandler = async (obj: any) => {
       const podInfo = this.parsePodInfo(obj);
       if (podInfo) {
         await updateCallback(podInfo);
       }
-    });
-    informer.on('delete', async (obj: k8s.V1Pod) => {
+    };
+    const deleteHandler = async (obj: any) => {
       const podInfo = this.parsePodInfo(obj);
       if (podInfo) {
         await deleteCallback(podInfo);
       }
-    });
-    informer.on('error', async (err: k8s.V1Pod) => {
-      // eslint-disable-next-line no-console
-      console.log(err);
+    };
+    const errorHandler = async () => {
       await errorCallback();
-      // Restart informer after 5sec
-      setTimeout(async () => {
-        await informer.start();
-      }, 5000);
-    });
-    await informer.start();
+    };
+
+    const http2Request = {
+      webRequest: (opts: any, _callback: any) => {
+        const connectionOptions = {};
+        this.config.applyToRequest(connectionOptions as any);
+        const url = new URL(opts.uri);
+        const host = `${url.protocol}//${url.host}`;
+        const http2ClientSession = http2.connect(host, { ca: connectionOptions['ca'] });
+        let path = '/api/v1/pods?watch=true';
+        if (opts && opts.qs && opts.qs.resourceVersion) {
+          path += `&resourceVersion=${opts.qs.resourceVersion}`;
+        }
+        const requestHeaders = { ':method': 'GET', ':path': path };
+        requestHeaders['Authorization'] = connectionOptions['headers'].Authorization;
+        const requestOptions = {
+          endStream: false,
+        };
+        const http2Stream = http2ClientSession.request(requestHeaders, requestOptions);
+        let count = 0;
+        const pingInterval = setInterval(() => {
+          let payload = count.toString().padStart(8, '0');
+          payload = payload.slice(payload.length - 8);
+          if (http2Stream.closed || http2Stream.destroyed) {
+            if (!http2Stream.closed) {
+              http2Stream.emit('close');
+            }
+            return;
+          }
+          http2ClientSession.ping(Buffer.from(payload), (error, _duration, _payload) => {
+            if ((error || http2Stream.closed
+              || http2Stream.destroyed) && this.informer && !this.informer.stopped) {
+              if (!http2Stream.closed) {
+                http2Stream.emit('close');
+              }
+            }
+            count += 1;
+          });
+        }, 5000);
+
+        http2Stream.on('end', () => {
+          clearInterval(pingInterval);
+          http2ClientSession.close();
+          this.informer.off('error', errorHandler);
+          this.informer.off('add', addHandler);
+          this.informer.off('update', updateHandler);
+          this.informer.off('delete', deleteHandler);
+          this.informer.stop();
+        });
+        return http2Stream;
+      },
+    };
+    const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
+    const listFn = () => coreApi.listPodForAllNamespaces();
+    const watch = new k8s.Watch(this.config, http2Request);
+    this.informer = new k8s.ListWatch('/api/v1/pods', watch, listFn, false);
+
+    this.informer.start();
+    this.informer.on('error', errorHandler);
+    this.informer.on('add', addHandler);
+    this.informer.on('update', updateHandler);
+    this.informer.on('delete', deleteHandler);
+
+    setInterval(async () => {
+      if (this.informer && this.informer.stopped) {
+        try {
+          await this.informer.start();
+        } catch (err) {
+          this.informer.stop();
+          return;
+        }
+        this.informer.on('error', errorHandler);
+        this.informer.on('add', addHandler);
+        this.informer.on('update', updateHandler);
+        this.informer.on('delete', deleteHandler);
+      }
+    }, 15000);
   }
 
   /**
@@ -714,8 +787,8 @@ export default class Api {
   getContainerLog = async (appName: string, namespace: string, sinceSeconds?: number) => {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     const podInfo = await this.getPodInfobyAppName(appName, namespace);
-    if (podInfo.podName) {
-      const result = await coreApi.readNamespacedPodLog(podInfo.podName, namespace,
+    if (podInfo.name) {
+      const result = await coreApi.readNamespacedPodLog(podInfo.name, namespace,
         undefined, undefined, undefined, undefined, undefined,
         undefined, sinceSeconds, undefined, true);
       return result.body;

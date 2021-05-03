@@ -25,11 +25,11 @@ export default class Docker {
     this.removeImageQueue = new Queue<string>();
     this.dockerode = dockerode;
 
-    if (constants.DOCKER_USERNAME && constants.DOCKER_PASSWORD && constants.DOCKER_SERVER) {
+    if (constants.REGISTRY_USERNAME && constants.REGISTRY_PASSWORD && constants.REGISTRY_SERVER) {
       this.authInfo = {
-        username: constants.DOCKER_USERNAME,
-        password: constants.DOCKER_PASSWORD,
-        serveraddress: constants.DOCKER_SERVER,
+        username: constants.REGISTRY_USERNAME,
+        password: constants.REGISTRY_PASSWORD,
+        serveraddress: constants.REGISTRY_SERVER,
       };
     }
   }

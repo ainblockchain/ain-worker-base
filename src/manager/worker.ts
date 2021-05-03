@@ -36,13 +36,13 @@ export default class WorkerBase {
 
   protected workerInfo: types.WorkerInfo;
 
-  protected endpoint: string;
+  protected istioEndpoint: string;
 
   protected maxDurationTimer: any;
 
-  static workerInfoWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
+  protected currentNodePoolDict: types.NodePool;
 
-  static podWriteTime = 10000;
+  static workerInfoWriteTime = 30000; // Lebel Name for selecting AIN Connect resource.
 
   static workerForHealthCheckTime = 5000;
 
@@ -54,6 +54,7 @@ export default class WorkerBase {
         limits: ConnectSdk.types.NodeInfo,
         containerId: string,
         ainConnect: boolean,
+        phase: string,
       };
     }
   }
@@ -77,12 +78,12 @@ export default class WorkerBase {
     )`);
     this.workerInfo = workerInfo;
     this.maxDurationTimer = {};
-    if (constants.IS_DOCKER !== 'true' && k8sConfigPath) {
+    if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() === 'true') {
+      this.dockerApi = Docker.getInstance();
+    } else if (k8sConfigPath) {
       this.nodeLimits = {};
       this.connectContainerInfo = {};
       this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
-    } else {
-      this.dockerApi = Docker.getInstance();
     }
   }
 
@@ -103,18 +104,22 @@ export default class WorkerBase {
    * Start Worker for Kubernetes.
   */
   async startForK8s() {
-    // For network Policy.
-    await this.k8sApi.addLabelNamespace('istio-system', {
-      worker: 'yes',
-    });
     await this.setEndpoint();
+    if (this.istioEndpoint) {
+      // For network Policy.
+      await this.k8sApi.addLabelNamespace('istio-system', {
+        worker: 'yes',
+      });
+    } else if (!constants.NODE_PORT_IP) {
+      throw new Error('NODE_PORT_IP Not Exists');
+    }
     await this.initPodInfo();
     await this.initStorageInfo();
     await this.initMaxDurationTimer();
     // Start to get node Information.
     setIntervalAsync(this.intervalNodeInfoHandler, WorkerBase.workerInfoWriteTime);
     setIntervalAsync(this.intervalHealth, WorkerBase.workerForHealthCheckTime);
-    setIntervalAsync(this.intervalPodInfoCheck, WorkerBase.podWriteTime);
+    this.watchPodInfos();
     // Start to get Pod Information.
     // Start to listen SDK Request.
     await this.connectSdk.listenRequest({
@@ -136,7 +141,7 @@ export default class WorkerBase {
   async startForDocker() {
     await this.initContainerForDocker();
     setIntervalAsync(this.intervalWorkerInfoForDocker, WorkerBase.workerInfoWriteTime);
-    setIntervalAsync(this.intervaContainerInfoForDocker, WorkerBase.containerWriteTime);
+    setIntervalAsync(this.intervalContainerInfoForDocker, WorkerBase.containerWriteTime);
     await this.connectSdk.listenRequest({
       deployForDocker: this.deployForDocker,
       undeployForDocker: this.undeployForDocker,
@@ -145,9 +150,13 @@ export default class WorkerBase {
   }
 
   protected async setEndpoint() {
-    const hosts = await this.k8sApi.getGatewayHosts(WorkerBase.k8sConstants.gatewayName,
-      'istio-system');
-    [this.endpoint] = hosts;
+    try {
+      const hosts = await this.k8sApi.getGatewayHosts(WorkerBase.k8sConstants.gatewayName,
+        'istio-system');
+      [this.istioEndpoint] = hosts;
+    } catch (err) {
+      log.info(`[+] istio Gateway Not Exists - ${err}`);
+    }
   }
 
   /**
@@ -255,7 +264,6 @@ export default class WorkerBase {
     address: string, params: ConnectSdk.types.DeployParams) => {
     log.debug(`[+] deploy [namespaceId: ${params.namespaceId}]`);
     const containerId = getRandomString();
-    const baseEndpoint = this.endpoint.replace('*', containerId);
     const ports = params.containerInfo.port;
 
     // Checking if the storage exists
@@ -304,19 +312,27 @@ export default class WorkerBase {
       );
       await this.k8sApi.apply(deployJson);
 
+      const isNodePort = !this.istioEndpoint;
       // Create Service.
       const svcJson = K8sUtil.Template.getService(containerId,
-        params.namespaceId, params.containerInfo.port, undefined);
-      await this.k8sApi.apply(svcJson);
+        params.namespaceId, params.containerInfo.port, undefined, isNodePort);
+      const result = await this.k8sApi.apply(svcJson);
 
       const endpoint = {};
-      // Create VirtualService per extenal Port.
-      for (const port of ports) {
-        const subEndpoint = `${port}-${baseEndpoint}`;
-        const vsJson = K8sUtil.Template.getVirtualService(`${containerId}${port}`,
-          params.namespaceId, containerId, subEndpoint, `${WorkerBase.k8sConstants.gatewayName}.istio-system`, Number(port));
-        await this.k8sApi.apply(vsJson);
-        endpoint[port] = subEndpoint;
+      if (isNodePort) {
+        for (const portInfo of result['spec']['ports']) {
+          endpoint[portInfo.port] = `${constants.NODE_PORT_IP}:${portInfo.nodePort}`;
+        }
+      } else {
+        // Create VirtualService per extenal Port.
+        for (const port of ports) {
+          const baseEndpoint = this.istioEndpoint.replace('*', containerId);
+          const subEndpoint = `${port}-${baseEndpoint}`;
+          const vsJson = K8sUtil.Template.getVirtualService(`${containerId}${port}`,
+            params.namespaceId, containerId, subEndpoint, `${WorkerBase.k8sConstants.gatewayName}.istio-system`, Number(port));
+          await this.k8sApi.apply(vsJson);
+          endpoint[port] = subEndpoint;
+        }
       }
       // maxDuration : x hours.
       if (params.maxDuration) {
@@ -348,7 +364,9 @@ export default class WorkerBase {
     try {
       await this.k8sApi.deleteResource('deployment', params.containerId, params.namespaceId);
       await this.k8sApi.deleteResource('service', params.containerId, params.namespaceId);
-      await this.k8sApi.deleteResource('virtualService', params.containerId, params.namespaceId);
+      if (this.istioEndpoint) {
+        await this.k8sApi.deleteResource('virtualService', params.containerId, params.namespaceId);
+      }
       if (this.maxDurationTimer[params.containerId]) {
         clearTimeout(this.maxDurationTimer[params.containerId]);
         delete this.maxDurationTimer[params.containerId];
@@ -548,7 +566,7 @@ export default class WorkerBase {
   protected intervalHealth = async () => {
     try {
       await this.connectSdk.setClusterStatus({
-        nodePool: {},
+        nodePool: this.currentNodePoolDict,
         clusterName: this.workerInfo.clusterName,
       });
     } catch (err) {
@@ -590,6 +608,7 @@ export default class WorkerBase {
           };
         }
       }
+      this.currentNodePoolDict = nodePoolDict;
       // Write Cluster Status with Node Info to Redis.
       await this.connectSdk.setClusterStatus({
         nodePool: nodePoolDict,
@@ -617,19 +636,49 @@ export default class WorkerBase {
 
   protected writePodStatus = async (data: types.PodInfo) => {
     const phase = this.convertStatus(data);
-    await this.connectSdk.setPodStatus({
-      clusterName: this.workerInfo.clusterName,
+    let changed = true;
+    if (this.nodeLimits[data.targetNodeName][data.name]) {
+      const { phase: prePhase } = this.nodeLimits[data.targetNodeName][data.name];
+      if (prePhase === phase) changed = false;
+      log.debug(`[+] setPodStatus podName: ${data.appName} - ${prePhase} -> ${phase}`);
+    }
+    this.nodeLimits[data.targetNodeName][data.name] = {
+      limits: data.resourcelimits,
       containerId: data.appName,
-      podId: data.name,
-      podStatus: {
-        podName: data.name,
-        namespaceId: data.namespaceId,
-        status: {
-          phase,
-        },
-        image: data.image,
-      },
-    });
+      ainConnect: !!(data.labels && data.labels.ainConnect),
+      phase,
+    };
+    if (changed && phase !== 'createContainer') {
+      let condition;
+      if (data.status.containerStatuses && data.status.containerStatuses[0].state?.waiting) {
+        const waitingInfo = data.status.containerStatuses[0].state?.waiting;
+        condition = {
+          type: 'ContainersReady' as 'ContainersReady',
+          status: false,
+          reason: waitingInfo.reason,
+          message: waitingInfo.message,
+        };
+      }
+      log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
+      try {
+        await this.connectSdk.setPodStatus({
+          clusterName: this.workerInfo.clusterName,
+          containerId: data.appName,
+          podId: data.name,
+          podStatus: {
+            podName: data.name,
+            namespaceId: data.namespaceId,
+            status: {
+              phase,
+              condition,
+            },
+            image: data.image,
+          },
+        });
+      } catch (err) {
+        log.error(`[-] Failed to set pod status - ${err}`);
+      }
+    }
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
     if (!this.connectContainerInfo[data.appName]) this.connectContainerInfo[data.appName] = {};
     this.connectContainerInfo[data.appName][data.name] = {
@@ -647,18 +696,13 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status}`);
     try {
       // Stores all pod information for each node.
       if (!this.nodeLimits[data.targetNodeName]) {
         this.nodeLimits[data.targetNodeName] = {};
       }
-      this.nodeLimits[data.targetNodeName][data.name] = {
-        limits: data.resourcelimits,
-        containerId: data.appName,
-        ainConnect: !!(data.labels && data.labels.ainConnect),
-      };
-      if (this.nodeLimits[data.targetNodeName][data.name].ainConnect) {
+      if (data.labels && data.labels.ainConnect) {
+        log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
         await this.writePodStatus(data);
       }
     } catch (err) {
@@ -696,8 +740,8 @@ export default class WorkerBase {
   /**
    * Start to Watch Pod Information.
   */
-  protected async watchPodInfos() {
-    await this.k8sApi.watchPod(
+  protected watchPodInfos() {
+    this.k8sApi.makeInformerPod(
       this.podUpdataOrAddCallback, // ADDED
       this.podUpdataOrAddCallback, // UPDATE
       this.podDeleteCallback, // DELETE
@@ -708,66 +752,6 @@ export default class WorkerBase {
         this.nodeLimits = {};
       },
     );
-  }
-
-  protected intervalPodInfoCheck = async () => {
-    let podCnt = 0;
-    if (this.connectContainerInfo) {
-      for (const contaienrId of Object.keys(this.connectContainerInfo)) {
-        podCnt += Object.keys(this.connectContainerInfo[contaienrId]).length;
-      }
-    }
-    log.debug(`[+] intervalPodInfoCheck podCnt: ${podCnt}`);
-    const podInfoList = await this.k8sApi.getAllPodInfoList()
-      .catch((_) => []);
-
-    const promiseList = [];
-    const containerInfo = {};
-    if (!this.connectContainerInfo) this.connectContainerInfo = {};
-
-    // Create
-    for (const podInfo of podInfoList) {
-      if (!containerInfo[podInfo.appName]) containerInfo[podInfo.appName] = {};
-      if (!containerInfo[podInfo.appName][podInfo.name]) {
-        containerInfo[podInfo.appName][podInfo.name] = podInfo;
-      }
-      if (!this.nodeLimits[podInfo.targetNodeName]) this.nodeLimits[podInfo.targetNodeName] = {};
-      this.nodeLimits[podInfo.targetNodeName][podInfo.name] = {
-        limits: podInfo.resourcelimits,
-        containerId: podInfo.appName,
-        ainConnect: !!(podInfo.labels && podInfo.labels.ainConnect),
-      };
-      if (this.nodeLimits[podInfo.targetNodeName][podInfo.name].ainConnect) {
-        const preData = (this.connectContainerInfo[podInfo.appName])
-          ? this.connectContainerInfo[podInfo.appName][podInfo.name] : undefined;
-        if (!preData || (preData.params.status.phase !== this.convertStatus(podInfo))) {
-          promiseList.push(this.writePodStatus(podInfo));
-        }
-      }
-    }
-
-    // Delete
-    for (const containerId of Object.keys(this.connectContainerInfo)) {
-      for (const podId of Object.keys(this.connectContainerInfo[containerId])) {
-        if (!(containerInfo[containerId] && containerInfo[containerId][podId])) {
-          promiseList.push(this.connectSdk.deletePodStatus(
-            this.workerInfo.clusterName, containerId,
-            podId,
-          ));
-          delete this.connectContainerInfo[containerId][podId];
-        }
-      }
-    }
-
-    for (const nodeName of Object.keys(this.nodeLimits)) {
-      for (const [podId, data] of Object.entries(this.nodeLimits[nodeName])) {
-        if (!(containerInfo[data.containerId] && containerInfo[data.containerId][podId])) {
-          delete this.nodeLimits[nodeName][podId];
-        }
-      }
-    }
-
-    await Promise.all(promiseList);
   }
 
   public initContainerForDocker = async () => {
@@ -813,18 +797,26 @@ export default class WorkerBase {
   }
 
   private intervalWorkerInfoForDocker = async () => {
-    await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
+    try {
+      await this.connectSdk.setWorkerStatusForDocker(this.workerInfo.clusterName);
+    } catch (err) {
+      log.error(`[-] intervalWorkerInfoForDocker - ${err.message}`);
+    }
   };
 
-  private intervaContainerInfoForDocker = async () => {
+  private intervalContainerInfoForDocker = async () => {
     const allContainerInfo = await this.dockerApi.getAllContainerInfo();
     for (const [containerId, containerInfo] of Object.entries(allContainerInfo)) {
       const containerStatus = containerInfo as ConnectSdk.types.ContainerStatusForDocker;
-      await this.connectSdk.setContainerStatusForDocker({
-        containerStatus,
-        containerId,
-        clusterName: this.workerInfo.clusterName,
-      });
+      try {
+        await this.connectSdk.setContainerStatusForDocker({
+          containerStatus,
+          containerId,
+          clusterName: this.workerInfo.clusterName,
+        });
+      } catch (err) {
+        log.error(`[-] intervalContainerInfoForDocker - ${err.message}`);
+      }
     }
   };
 }

@@ -1,10 +1,11 @@
 import * as winston from 'winston';
+import moment from 'moment-timezone';
 import SlackHook from 'winston-slack-webhook-transport';
 import * as constants from './constants';
 
 const myFormat = winston.format.printf(({
-  level, message, label, timestamp,
-}) => `${timestamp} [${label}] ${level}: ${message}`);
+  level, message, label, _timestamp,
+}) => `${moment().tz('Asia/Seoul').format()} [${label}] ${level}: ${message}`);
 
 const transports = (constants.SLACK_WEBHOOK_URL) ? [
   new (winston.transports.Console)({ level: 'debug' }),
@@ -19,7 +20,7 @@ const transports = (constants.SLACK_WEBHOOK_URL) ? [
           fields: [
             {
               title: `${info.level} Message`,
-              value: `${info.timestamp} [${info.label}] ${info.message}`,
+              value: `${moment().tz('Asia/Seoul').format()} [${info.label}] ${info.message}`,
               short: false,
             },
           ],
