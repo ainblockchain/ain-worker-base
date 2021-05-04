@@ -646,6 +646,36 @@ export default class Api {
         });
       }
 
+      if (config.storageSpec) {
+        const volumes = [];
+        const volumeMounts = [];
+
+        for (const [storageId, storageSpec] of Object.entries(config.storageSpec)) {
+          volumes.push({
+            name: storageId,
+            persistentVolumeClaim: { claimName: storageId },
+          });
+
+          volumeMounts.push(JSON.parse(JSON.stringify({
+            name: storageId,
+            mountPath: storageSpec.mountPath,
+            readOnly: !!(storageSpec.readOnly),
+            subPath: storageSpec.subPath,
+          })));
+        }
+
+        patch.push({
+          op: 'replace',
+          path: '/spec/template/spec/volumes',
+          value: volumes,
+        });
+        patch.push({
+          op: 'replace',
+          path: '/spec/template/spec/containers/0/volumeMounts',
+          value: volumeMounts,
+        });
+      }
+
       if (config.env) {
         const envValue = [];
         for (const key of Object.keys(config.env)) {

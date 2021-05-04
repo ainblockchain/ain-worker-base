@@ -73,6 +73,7 @@ export type DeploymentConfig = {
   env?: Object;
   replicas?: number;
   imageName?: string;
+  storageSpec?: StorageSpec;
 }
 
 export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
