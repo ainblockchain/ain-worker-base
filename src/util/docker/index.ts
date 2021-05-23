@@ -52,7 +52,8 @@ export default class Docker {
    * @returns Promise<number>
    */
   async run(name: string, image: string, env?: {[key: string]: string},
-    command?: string[], netHost: boolean = false) {
+    command?: string[], netHost: boolean = false,
+    publishPorts?: { [externalPort: string]: string }) {
     // Assemble the create option
     this.containersDict[name] = { status: true };
     const Env = [];
@@ -62,16 +63,26 @@ export default class Docker {
       }
     }
     try {
-      const createOption: Dockerode.ContainerCreateOptions = {
+      const createOption = {
         name,
+        ExposedPorts: {},
         Env,
         Cmd: command,
         Image: image,
         HostConfig: {
+          PortBindings: {},
           Binds: [],
           NetworkMode: (netHost) ? 'host' : undefined,
         },
       };
+
+      if (publishPorts) {
+        for (const [externalPort, internalPort] of Object.entries(publishPorts)) {
+          createOption.ExposedPorts[`${internalPort}/tcp`] = {};
+          createOption.HostConfig.PortBindings[`${internalPort}/tcp`] = [{ HostPort: externalPort }];
+        }
+      }
+
       const status = await this.autoPull(name, image)
         .catch(() => 500);
       if (status !== 0) throw new Error('Failed to pull image.');
