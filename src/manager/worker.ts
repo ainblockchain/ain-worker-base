@@ -471,7 +471,7 @@ export default class WorkerBase {
           capacity: params.capacity,
           nfsInfo: params.nfsInfo,
           storageClassName,
-          accessModes: 'ReadWriteMany',
+          accessModes: 'ReadWriteOnce',
           labels: {
             ainConnect: 'yes',
           },
@@ -482,7 +482,7 @@ export default class WorkerBase {
       const pvcJson = K8sUtil.Template.getPersistentVolumeClaim(storageId, params.namespaceId, {
         capacity: params.capacity,
         storageClassName,
-        accessModes: 'ReadWriteMany',
+        accessModes: 'ReadWriteOnce',
         labels: {
           ainConnect: 'yes',
           [WorkerBase.k8sConstants.addressLabalName]: address,
