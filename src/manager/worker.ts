@@ -472,7 +472,7 @@ export default class WorkerBase {
           capacity: params.capacity,
           nfsInfo: params.nfsInfo,
           storageClassName,
-          accessModes: 'ReadWriteMany',
+          accessModes: 'ReadWriteOnce',
           labels: {
             ainConnect: 'yes',
           },
@@ -483,7 +483,7 @@ export default class WorkerBase {
       const pvcJson = K8sUtil.Template.getPersistentVolumeClaim(storageId, params.namespaceId, {
         capacity: params.capacity,
         storageClassName,
-        accessModes: 'ReadWriteMany',
+        accessModes: 'ReadWriteOnce',
         labels: {
           ainConnect: 'yes',
           [WorkerBase.k8sConstants.addressLabalName]: address,
@@ -777,7 +777,10 @@ export default class WorkerBase {
     params: ConnectSdk.types.DeployForDockerParams) => {
     log.debug(`[+] deployForDocker - address:${address}`);
     const containerId = getRandomString();
-    await this.dockerApi.run(containerId, params.image, params.env, params.command, true);
+    await this.dockerApi.run(
+      containerId, params.image, params.env, params.command,
+      !params.publishPorts, params.publishPorts,
+    );
     const containerStatus = await this.dockerApi.getContainerInfo(containerId);
     setTimeout(async () => {
       await this.connectSdk.setContainerStatusForDocker({
