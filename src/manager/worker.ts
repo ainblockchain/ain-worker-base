@@ -131,6 +131,7 @@ export default class WorkerBase {
       createStorage: this.createStorage,
       deleteStorage: this.deleteStorage,
       getContainerLog: this.getContainerLog,
+      updateContainerStatus: this.updateContainerStatus,
     });
     log.info(`[+] Start Worker [Name: ${this.workerInfo.clusterName}]`);
   }
@@ -819,4 +820,15 @@ export default class WorkerBase {
       }
     }
   };
+
+  private updateContainerStatus = async (params: ConnectSdk.types.UpdateContainerStatusParams) => {
+    const data = await this.k8sApi.getPodInfobyAppName(params.containerId, params.namespaceId);
+    if (!this.nodeLimits[data.targetNodeName]) {
+      this.nodeLimits[data.targetNodeName] = {};
+    }
+    log.debug(`[+] updateContainerStatus podName: ${data.appName}, status:${data.status.phase}`);
+    await this.writePodStatus(data);
+
+    return { containerId: params.containerId };
+  }
 }
