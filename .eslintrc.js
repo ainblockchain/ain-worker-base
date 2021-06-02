@@ -19,6 +19,14 @@ module.exports = {
     "@typescript-eslint"
   ],
   "rules": {
+    "class-methods-use-this": 0,
+    "no-param-reassign": 0,
+    "dot-notation": 0,
+    "no-restricted-syntax": 0,
+    "no-await-in-loop": 0,
+    "import/no-extraneous-dependencies": 0,
+    "no-unused-vars": 0,
+    "no-throw-literal": 0,
     "import/extensions": [
       "error",
       "ignorePackages",

@@ -125,3 +125,11 @@ squad*
 # nodejs specific
 node_modules
 sockets
+config.yaml
+temp
+config
+docker_start.sh
+k8s_start.sh
+firebase.json
+temp
+initKubeYaml
