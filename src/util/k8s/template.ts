@@ -64,6 +64,12 @@ export default class Template {
       },
     };
 
+    if (config.strategy) {
+      templateJson.spec['strategy'] = {
+        type: config.strategy,
+      };
+    }
+
     if (containerSpec.env) {
       for (const [envName, value] of Object.entries(containerSpec.env)) {
         templateJson.spec.template.spec.containers[0].env.push({

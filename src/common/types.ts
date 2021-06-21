@@ -137,10 +137,11 @@ export type DeploymentCreateConfig = {
   storageSpec?: StorageSpec;
   secretSpec?: SecretSpecs
   imagePullSecretName?: string;
-  labels?: {[key: string]: string},
-  nodePoolLabel?: Object,
+  labels?: {[key: string]: string};
+  nodePoolLabel?: Object;
   replicas?: number;
   privileged?: boolean;
+  strategy?: 'RollingUpdate' | 'Recreate';
 }
 
 export type HwStatus = {

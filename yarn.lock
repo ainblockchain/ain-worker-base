@@ -54,10 +54,10 @@
     nanoid "^3.1.12"
     redis "^3.0.2"
 
-"@aindev/connect-sdk@0.1.23":
-  version "0.1.23"
-  resolved "https://registry.yarnpkg.com/@aindev/connect-sdk/-/connect-sdk-0.1.23.tgz#6de30450eead20dfa81bce65ceb5674735c001d0"
-  integrity sha512-BQu79qEvI4I+VIpFVi8woquxtI3bICKq7q1Cr0wiRbWr5Sudpv4CoHZ/lQmEDLZb9xSPZUFvaFqD25bv7Rm9QQ==
+"@aindev/connect-sdk@0.1.24":
+  version "0.1.24"
+  resolved "https://registry.yarnpkg.com/@aindev/connect-sdk/-/connect-sdk-0.1.24.tgz#57292b0fff74a540b0c6f2607c873302cd09ff89"
+  integrity sha512-VNCS/az7cEYreuV1iTPgLeDdL8uJROosbna+9KXfPVrBrJTTzJraLhqW7J9Cq2BjKYXaD/qWZWy64ZX91hteHg==
   dependencies:
     "@ainblockchain/ain-js" "^1.0.2"
     "@ainblockchain/ain-util" "^1.1.5"

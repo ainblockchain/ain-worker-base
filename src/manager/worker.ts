@@ -294,6 +294,7 @@ export default class WorkerBase {
           env: params.containerInfo.env,
           ports,
         }, {
+          strategy: params.strategy,
           storageSpec: params.containerInfo.storageSpec,
           secretSpec: params.containerInfo.secretSpec,
           imagePullSecretName: (this.workerInfo.dockerAuth)
