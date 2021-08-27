@@ -80,7 +80,10 @@ export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown
 
 export type PodInfo = {
   targetNodeName: string;
-  resourcelimits: HwSpec,
+  resource: {
+    limits: HwSpec,
+    requests: HwSpec,
+  },
   labels: { [key: string]: string },
   appName: string,
   name: string,

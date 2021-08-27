@@ -346,10 +346,10 @@ export default class Api {
   parsePodInfo(pod: k8s.V1Pod): types.PodInfo | undefined {
     if (pod.spec && pod.metadata && pod.status && pod.metadata.labels) {
       const { containers } = pod.spec;
-      const resourcelimits = this.getPodLimit(containers);
+      const resource = this.getPodLimit(containers);
       const podInfo = {
         targetNodeName: pod.spec.nodeName as string,
-        resourcelimits,
+        resource,
         labels: pod.metadata.labels,
         appName: pod.metadata.labels.app,
         name: pod.metadata.name as string,
@@ -376,33 +376,29 @@ export default class Api {
       memory: 0,
       gpu: 0,
     };
+    const requests = {
+      cpu: 0,
+      memory: 0,
+      gpu: 0,
+    };
     for (const container of containers) {
       if (container.resources) {
         const containerLimits = this.convertToUnit(container.resources.limits as types.HwK8sSpec);
         const containerRequests = this.convertToUnit(
           container.resources.requests as types.HwK8sSpec,
         );
-        // CPU
-        if (container.resources.limits && container.resources.limits.cpu
-          && containerLimits.cpu > 0) {
-          limits.cpu += containerLimits.cpu;
-        } else if (container.resources.requests && container.resources.requests.cpu) {
-          limits.cpu += containerRequests.cpu;
-        }
-        // Memory
-        if (container.resources.limits && container.resources.limits.memory
-          && containerRequests.memory > 0) {
-          limits.memory += containerRequests.memory;
-        } else if (container.resources.requests && container.resources.requests.memory) {
-          limits.memory += containerRequests.memory;
-        }
-        // GPU
-        if (container.resources.limits && container.resources.limits['nvidia.com/gpu']) {
-          limits.gpu += parseInt(container.resources.limits['nvidia.com/gpu'], 10);
-        }
+        limits.cpu += containerLimits.cpu;
+        requests.cpu += containerRequests.cpu;
+        limits.memory += containerLimits.memory;
+        requests.memory += containerRequests.memory;
+        limits.gpu += containerLimits.gpu;
+        requests.gpu += containerRequests.gpu;
       }
     }
-    return limits;
+    return {
+      limits,
+      requests,
+    };
   }
 
   /**
@@ -483,16 +479,30 @@ export default class Api {
               const nodePoolName = node.metadata.labels[nodePoolLabel];
               const gpuType = node.metadata.labels[gpuTypeLabel];
               const targetPodInfoList = allPodInfoList
-                .filter((podInfo) => (podInfo.targetNodeName === node.metadata.name));
-              const allocatable = {
-                cpu: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.cpu)
+                .filter((podInfo) => (podInfo.targetNodeName === node.metadata.name
+                  && ['Pending', 'Running'].includes(podInfo.status.phase)));
+              const requests = {
+                cpu: targetPodInfoList.map((podInfo) => podInfo.resource.requests.cpu)
                   .reduce((current, pre) => pre + current),
-                memory: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.memory)
+                memory: targetPodInfoList.map((podInfo) => podInfo.resource.requests.memory)
                   .reduce((current, pre) => pre + current),
-                gpu: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.gpu)
+                gpu: targetPodInfoList.map((podInfo) => podInfo.resource.requests.gpu)
                   .reduce((current, pre) => pre + current),
               };
-
+              const limits = {
+                cpu: targetPodInfoList.map((podInfo) => podInfo.resource.limits.cpu)
+                  .reduce((current, pre) => pre + current),
+                memory: targetPodInfoList.map((podInfo) => podInfo.resource.limits.memory)
+                  .reduce((current, pre) => pre + current),
+                gpu: targetPodInfoList.map((podInfo) => podInfo.resource.limits.gpu)
+                  .reduce((current, pre) => pre + current),
+              };
+              const capacity = this.convertToUnit(node.status.allocatable);
+              const used = {
+                cpu: (requests.cpu > limits.cpu) ? requests.cpu : limits.cpu,
+                memory: (requests.memory > limits.memory) ? requests.cpu : limits.memory,
+                gpu: (requests.gpu > limits.gpu) ? requests.gpu : limits.gpu,
+              };
               if (nodePoolName) {
                 if (!nodePool[nodePoolName]) {
                   nodePool[nodePoolName] = JSON.parse(JSON.stringify({
@@ -502,8 +512,13 @@ export default class Api {
                   }));
                 }
                 nodePool[nodePoolName].nodes[node.metadata.name] = {
-                  capacity: this.convertToUnit(node.status.allocatable),
-                  allocatable,
+                  capacity,
+                  allocatable: {
+                    cpu: (capacity.cpu - used.cpu >= 0) ? capacity.cpu - used.cpu : 0,
+                    memory: (capacity.memory - used.memory >= 0)
+                      ? capacity.memory - used.memory : 0,
+                    gpu: (capacity.gpu - used.gpu >= 0) ? capacity.gpu - used.gpu : 0,
+                  },
                 };
               }
             }

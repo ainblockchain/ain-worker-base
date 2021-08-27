@@ -1,4 +1,4 @@
-<h1 align="center">AIN Connect Worker Base</h1>
+<h1 align="center">AIN Connect Worker Base For LG Robot</h1>
 <h4 align="center">AIN Connect 와 연결하여 HW 생태계를 만들어주는 프로젝트이다.</h4>
                                                                                                 
 **AIN Worker** 프로젝트는 Node.js로 작성되었습니다.
@@ -33,7 +33,9 @@ docker run -d --name worker -e CLUSTER_NAME={CLUSTER_NAME} \
 -e REGISTRY_PASSWORD={REGISTRY_PASSWORD}
 -e REGISTRY_SERVER={REGISTRY_SERVER}
 -e GATEWAY_NAME={GATEWAY_NAME}
--e SLACK_WEBHOOK_URL={REGISTRY_USERNAME} -v {k8s config path}:/root/.kube/config ainblockchain/ain-connect-base
+-e SLACK_WEBHOOK_URL={REGISTRY_USERNAME} \
+-v {Firebase Config Path}:/worker/firebase.json
+-v {k8s config path}:/root/.kube/config ainblockchain/ain-connect-base
 
 ```
 - CLUSTER_NAME 과 MNEMONIC 는 필수이다.
