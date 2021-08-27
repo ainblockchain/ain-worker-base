@@ -1,6 +1,5 @@
 import { customAlphabet } from 'nanoid';
 import * as ConnectSdk from '@aindev/connect-sdk';
-import * as fs from 'fs';
 import { setIntervalAsync } from 'set-interval-async/dynamic';
 import Logger from '../common/logger';
 import * as types from '../common/types';
@@ -18,7 +17,7 @@ const getRandomString = () => {
 
 export default class WorkerBase {
   static k8sConstants = {
-    gatewayName: 'worker-gw', // Istio Gateway Name for Worker.
+    gatewayName: constants.GATEWAY_NAME || 'worker-gw', // Istio Gateway Name for Worker.
     dockerSecretName: 'docker-secret', // Docker Secret Name.
     nodePoolLabelName: 'Ainetwork.ai_nodepoolname', // Lebel Name for nodePool.
     gpuTypeLabelName: 'Ainetwork.ai_gpu_type', // Lebel Name for gpu Type.
@@ -48,31 +47,17 @@ export default class WorkerBase {
 
   static containerWriteTime = 5000; // Lebel Name for selecting AIN Connect resource.
 
-  protected nodeLimits: { // Node resource Limits
-    [nodeName: string]: {
-      [podName: string]: {
-        limits: ConnectSdk.types.NodeInfo,
-        containerId: string,
-        ainConnect: boolean,
-        phase: string,
-      };
-    }
-  }
-
   protected connectContainerInfo: ConnectSdk.types.GetAllContainersReturn;
 
-  constructor(workerInfo: types.WorkerInfo, env: 'staging' | 'prod',
-    k8sConfigPath?: string, test: boolean = false) {
+  constructor(workerInfo: types.WorkerInfo, env: 'staging' | 'prod', test: boolean = false) {
     if (!test) {
-      let config;
-      if (fs.existsSync(constants.FIREBASE_CONFIG_PATH)) {
-        config = JSON.parse(String(fs.readFileSync(constants.FIREBASE_CONFIG_PATH)));
-      }
       this.connectSdk = new ConnectSdk.Worker(
-        workerInfo.mnemonic, workerInfo.clusterName, env, config,
+        workerInfo.mnemonic, workerInfo.clusterName,
+        env, constants.FIREBASE_CONFIG,
       );
     }
     log.info(`[+] Worker Info ( 
+      NODE_ENV: ${constants.NODE_ENV}
       Worker Name: ${workerInfo.clusterName}
       Worker Address: ${this.connectSdk.getAddress()}
     )`);
@@ -80,10 +65,9 @@ export default class WorkerBase {
     this.maxDurationTimer = {};
     if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() === 'true') {
       this.dockerApi = Docker.getInstance();
-    } else if (k8sConfigPath) {
-      this.nodeLimits = {};
+    } else {
       this.connectContainerInfo = {};
-      this.k8sApi = K8sUtil.Api.getInstance(k8sConfigPath);
+      this.k8sApi = K8sUtil.Api.getInstance('/root/.kube/config');
     }
   }
 
@@ -92,9 +76,9 @@ export default class WorkerBase {
    * @returns WorkerBase instance.
   */
   static getInstance(workerInfo: types.WorkerInfo, env: 'staging' | 'prod',
-    k8sConfigPath?: string, test: boolean = false) {
+    test: boolean = false) {
     if (!WorkerBase.instance) {
-      WorkerBase.instance = new WorkerBase(workerInfo, env, k8sConfigPath, test);
+      WorkerBase.instance = new WorkerBase(workerInfo, env, test);
     }
 
     return WorkerBase.instance;
@@ -131,6 +115,8 @@ export default class WorkerBase {
       createStorage: this.createStorage,
       deleteStorage: this.deleteStorage,
       getContainerLog: this.getContainerLog,
+      updateContainerStatus: this.updateContainerStatus,
+      runCommand: this.runCommand,
     });
     log.info(`[+] Start Worker [Name: ${this.workerInfo.clusterName}]`);
   }
@@ -254,6 +240,23 @@ export default class WorkerBase {
     }
   }
 
+  private runCommand = async (_: string, params: ConnectSdk.types.RunCommandParams) => {
+    log.debug(`[+] runCommand cmd: ${params.cmd}`);
+    try {
+      const result = await this.k8sApi.runCommand(params.cmd);
+      if (result.statusCode !== 0) {
+        throw { statusCode: error.failed, errMessage: result.stderr };
+      }
+
+      return {
+        stdout: result.stdout,
+        stderr: result.stderr,
+      };
+    } catch (err) {
+      throw { statusCode: error.failed, errMessage: err };
+    }
+  }
+
   /**
    * Create Deployment, Service and VirtualService.
    * @returns containerId: Unique Id.
@@ -293,6 +296,7 @@ export default class WorkerBase {
           env: params.containerInfo.env,
           ports,
         }, {
+          strategy: params.strategy,
           storageSpec: params.containerInfo.storageSpec,
           secretSpec: params.containerInfo.secretSpec,
           imagePullSecretName: (this.workerInfo.dockerAuth)
@@ -346,6 +350,12 @@ export default class WorkerBase {
       };
     } catch (err) {
       log.error(`[-] Failed to deploy - ${err.message}`);
+      await this.undeploy(address, {
+        targetAddress: params.targetAddress,
+        clusterName: params.clusterName,
+        namespaceId: params.namespaceId,
+        containerId,
+      }).catch(() => {});
       throw { statusCode: error.failed, errMessage: err.message };
     }
   }
@@ -464,14 +474,14 @@ export default class WorkerBase {
 
     try {
       const storageId = getRandomString();
-      const storageClassName = (params.nfsInfo) ? storageId : constants.STORAGE_CLASS;
+      const storageClassName = (params.nfsInfo) ? storageId : constants.STORAGE_CLASS || '';
       if (params.nfsInfo) {
         // Create PV.
         const pvJson = K8sUtil.Template.getPersistentVolume(storageId, {
           capacity: params.capacity,
           nfsInfo: params.nfsInfo,
           storageClassName,
-          accessModes: 'ReadWriteMany',
+          accessModes: params.accessModes || 'ReadWriteOnce',
           labels: {
             ainConnect: 'yes',
           },
@@ -482,7 +492,7 @@ export default class WorkerBase {
       const pvcJson = K8sUtil.Template.getPersistentVolumeClaim(storageId, params.namespaceId, {
         capacity: params.capacity,
         storageClassName,
-        accessModes: 'ReadWriteMany',
+        accessModes: params.accessModes || 'ReadWriteOnce',
         labels: {
           ainConnect: 'yes',
           [WorkerBase.k8sConstants.addressLabalName]: address,
@@ -579,39 +589,27 @@ export default class WorkerBase {
   */
   protected intervalNodeInfoHandler = async () => {
     try {
-      let podCnt = 0;
-      for (const NodeName of Object.keys(this.nodeLimits)) {
-        podCnt += Object.keys(this.nodeLimits[NodeName]).length;
-      }
-      log.debug(`[+] intervalNodeInfoHandler <podCnt: ${podCnt}>`);
       const nodePoolDict = await this.k8sApi.getNodesInfo(
         WorkerBase.k8sConstants.nodePoolLabelName, WorkerBase.k8sConstants.gpuTypeLabelName,
       );
+      const convertNodePoolDict = {};
       for (const nodepool of Object.keys(nodePoolDict)) {
+        convertNodePoolDict[nodepool] = {
+          ...nodePoolDict[nodepool],
+          nodes: {},
+        };
         for (const nodeName of Object.keys(nodePoolDict[nodepool].nodes)) {
-          const node = nodePoolDict[nodepool].nodes[nodeName];
-          let currentLimits;
-          if (this.nodeLimits[nodeName]) { // It is updated periodically using Pod Information.
-            currentLimits = this.getSumLimitNode(this.nodeLimits[nodeName]);
-          } else {
-            return;
-          }
-          // Total Capacity that can actually be allocated
-          node.capacity = node.allocatable;
-          node.allocatable = {
-            cpu: (node.capacity.cpu - currentLimits.cpu > 0)
-              ? node.capacity.cpu - currentLimits.cpu : 0,
-            memory: (node.capacity.memory - currentLimits.memory > 0)
-              ? node.capacity.memory - currentLimits.memory : 0,
-            gpu: (node.capacity.gpu - currentLimits.gpu > 0)
-              ? node.capacity.gpu - currentLimits.gpu : 0,
+          const { capacity, allocatable } = nodePoolDict[nodepool].nodes[nodeName];
+          convertNodePoolDict[nodepool].nodes[nodeName.replace(/\./gi, '-')] = {
+            capacity,
+            allocatable,
           };
         }
       }
-      this.currentNodePoolDict = nodePoolDict;
+      this.currentNodePoolDict = convertNodePoolDict;
       // Write Cluster Status with Node Info to Redis.
       await this.connectSdk.setClusterStatus({
-        nodePool: nodePoolDict,
+        nodePool: convertNodePoolDict,
         clusterName: this.workerInfo.clusterName,
       });
     } catch (err) {
@@ -636,19 +634,7 @@ export default class WorkerBase {
 
   protected writePodStatus = async (data: types.PodInfo) => {
     const phase = this.convertStatus(data);
-    let changed = true;
-    if (this.nodeLimits[data.targetNodeName][data.name]) {
-      const { phase: prePhase } = this.nodeLimits[data.targetNodeName][data.name];
-      if (prePhase === phase) changed = false;
-      log.debug(`[+] setPodStatus podName: ${data.appName} - ${prePhase} -> ${phase}`);
-    }
-    this.nodeLimits[data.targetNodeName][data.name] = {
-      limits: data.resourcelimits,
-      containerId: data.appName,
-      ainConnect: !!(data.labels && data.labels.ainConnect),
-      phase,
-    };
-    if (changed && phase !== 'createContainer') {
+    if (phase !== 'createContainer') {
       let condition;
       if (data.status.containerStatuses && data.status.containerStatuses[0].state?.waiting) {
         const waitingInfo = data.status.containerStatuses[0].state?.waiting;
@@ -697,10 +683,6 @@ export default class WorkerBase {
   */
   protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
     try {
-      // Stores all pod information for each node.
-      if (!this.nodeLimits[data.targetNodeName]) {
-        this.nodeLimits[data.targetNodeName] = {};
-      }
       if (data.labels && data.labels.ainConnect) {
         log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
         await this.writePodStatus(data);
@@ -715,10 +697,6 @@ export default class WorkerBase {
   */
   protected podDeleteCallback = async (data: types.PodInfo) => {
     log.debug(`[+] podDeleteCallback podName: ${data.appName}, status:${data.status}`);
-    if (this.nodeLimits[data.targetNodeName]
-      && this.nodeLimits[data.targetNodeName][data.name]) {
-      delete this.nodeLimits[data.targetNodeName][data.name];
-    }
     // Only information generated through API is removed in redis.
     if (data.labels && data.labels.ainConnect) {
       if (data.labels && data.labels.nfs) {
@@ -749,7 +727,6 @@ export default class WorkerBase {
         log.debug('[+] watchPodInfos Error');
         // Remove Pod Information on Redis for sync.
         await this.initPodInfo();
-        this.nodeLimits = {};
       },
     );
   }
@@ -776,7 +753,10 @@ export default class WorkerBase {
     params: ConnectSdk.types.DeployForDockerParams) => {
     log.debug(`[+] deployForDocker - address:${address}`);
     const containerId = getRandomString();
-    await this.dockerApi.run(containerId, params.image, params.env, params.command, true);
+    await this.dockerApi.run(
+      containerId, params.image, params.env, params.command,
+      !params.publishPorts, params.publishPorts,
+    );
     const containerStatus = await this.dockerApi.getContainerInfo(containerId);
     setTimeout(async () => {
       await this.connectSdk.setContainerStatusForDocker({
@@ -819,4 +799,12 @@ export default class WorkerBase {
       }
     }
   };
+
+  private updateContainerStatus = async (params: ConnectSdk.types.UpdateContainerStatusParams) => {
+    const data = await this.k8sApi.getPodInfobyAppName(params.containerId, params.namespaceId);
+    log.debug(`[+] updateContainerStatus podName: ${data.appName}, status:${data.status.phase}`);
+    await this.writePodStatus(data);
+
+    return { containerId: params.containerId };
+  }
 }

@@ -2,7 +2,10 @@ import * as k8s from '@kubernetes/client-node';
 import { Base64 } from 'js-base64';
 import * as request from 'request';
 import * as http2 from 'http2';
+import * as util from 'util';
 import * as types from '../../common/types';
+
+const exec = util.promisify(require('child_process').exec);
 
 export default class Api {
   private config: k8s.KubeConfig;
@@ -463,6 +466,7 @@ export default class Api {
    * @param namespace: Namespace Name.
   */
   async getNodesInfo(nodePoolLabel: string, gpuTypeLabel: string) {
+    const allPodInfoList = await this.getAllPodInfoList();
     const url = `${this.config.getCurrentCluster()!.server}/api/v1/nodes`;
     const opts = {} as request.Options;
     this.config.applyToRequest(opts);
@@ -478,6 +482,17 @@ export default class Api {
             for (const node of nodes) {
               const nodePoolName = node.metadata.labels[nodePoolLabel];
               const gpuType = node.metadata.labels[gpuTypeLabel];
+              const targetPodInfoList = allPodInfoList
+                .filter((podInfo) => (podInfo.targetNodeName === node.metadata.name));
+              const allocatable = {
+                cpu: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.cpu)
+                  .reduce((current, pre) => pre + current),
+                memory: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.memory)
+                  .reduce((current, pre) => pre + current),
+                gpu: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.gpu)
+                  .reduce((current, pre) => pre + current),
+              };
+
               if (nodePoolName) {
                 if (!nodePool[nodePoolName]) {
                   nodePool[nodePoolName] = JSON.parse(JSON.stringify({
@@ -487,8 +502,8 @@ export default class Api {
                   }));
                 }
                 nodePool[nodePoolName].nodes[node.metadata.name] = {
-                  capacity: this.convertToUnit(node.status.capacity),
-                  allocatable: this.convertToUnit(node.status.allocatable),
+                  capacity: this.convertToUnit(node.status.allocatable),
+                  allocatable,
                 };
               }
             }
@@ -643,6 +658,36 @@ export default class Api {
           op: 'replace',
           path: '/spec/template/spec/containers/0/image',
           value: config.imageName,
+        });
+      }
+
+      if (config.storageSpec) {
+        const volumes = [];
+        const volumeMounts = [];
+
+        for (const [storageId, storageSpec] of Object.entries(config.storageSpec)) {
+          volumes.push({
+            name: storageId,
+            persistentVolumeClaim: { claimName: storageId },
+          });
+
+          volumeMounts.push(JSON.parse(JSON.stringify({
+            name: storageId,
+            mountPath: storageSpec.mountPath,
+            readOnly: !!(storageSpec.readOnly),
+            subPath: storageSpec.subPath,
+          })));
+        }
+
+        patch.push({
+          op: 'replace',
+          path: '/spec/template/spec/volumes',
+          value: volumes,
+        });
+        patch.push({
+          op: 'replace',
+          path: '/spec/template/spec/containers/0/volumeMounts',
+          value: volumeMounts,
         });
       }
 
@@ -819,5 +864,24 @@ export default class Api {
       }
     }
     return true;
+  }
+
+  async runCommand(cmd: string): Promise<types.KubectlCommandResult> {
+    const command = `cat << EOF | kubectl ${cmd} 
+EOF`;
+    try {
+      const result = await exec(command);
+
+      return {
+        ...result,
+        statusCode: 0,
+      };
+    } catch (error) {
+      return {
+        stdout: error.stdout,
+        stderr: error.stderr,
+        statusCode: error.code,
+      };
+    }
   }
 }

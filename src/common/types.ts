@@ -73,6 +73,7 @@ export type DeploymentConfig = {
   env?: Object;
   replicas?: number;
   imageName?: string;
+  storageSpec?: StorageSpec;
 }
 
 export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
@@ -136,10 +137,11 @@ export type DeploymentCreateConfig = {
   storageSpec?: StorageSpec;
   secretSpec?: SecretSpecs
   imagePullSecretName?: string;
-  labels?: {[key: string]: string},
-  nodePoolLabel?: Object,
+  labels?: {[key: string]: string};
+  nodePoolLabel?: Object;
   replicas?: number;
   privileged?: boolean;
+  strategy?: 'RollingUpdate' | 'Recreate';
 }
 
 export type HwStatus = {
@@ -182,4 +184,10 @@ export type NetworkConfig = {
   },
   podLabel?: { [key: string]: string },
   namespaceSelector?: { [key: string]: string },
+}
+
+export type KubectlCommandResult = {
+  stdout: string,
+  stderr: string,
+  statusCode: number,
 }

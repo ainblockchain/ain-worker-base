@@ -13,27 +13,40 @@
 
 <br>
 
-## env.json 작성
-```
-{
-  "CLUSTER_NAME": "", // 클러스터 별칭
-  "REGISTRY_USERNAME": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
-  "REGISTRY_PASSWORD": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
-  "REGISTRY_SERVER": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
-  "NODE_PORT_IP": "", // (optional) istio 없이 NodePort 로만 Endpoint 를 만드는 경우에 필요한 쿠버네티스 외부 IP.
-  "IS_DOCKER": "", // true 인 경우 도커 버전으로 워커를 시작함. (false 인 경우는 쿠버네티스 버전으로 시작.)
-  "STORAGE_CLASS": "" // (optional) PVC 생성할 때 사용되는 Storage Class.
-}
-```
+## 환경변수
+"CLUSTER_NAME": 클러스터 별칭
+"MNEMONIC": Worker 고유 문자열 리스트
+"IS_DOCKER": true 인 경우 도커 버전으로 워커를 시작함. (false 인 경우는 쿠버네티스 버전으로 시작.)
+"REGISTRY_USERNAME": (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
+"REGISTRY_PASSWORD": (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
+"REGISTRY_SERVER": (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
+"NODE_PORT_IP": (optional) istio 없이 NodePort 로만 Endpoint 를 만드는 경우에 필요한 쿠버네티스 외부 IP.
+"STORAGE_CLASS": (optional) PVC 생성할 때 사용되는 Storage Class.
 
 ## 도커로 시작
 ```
-// For K8s
-docker run -d --name worker-k8s -v {/PATH/TO/CONFIG}:/worker/env.json -v {k8s config path}:/worker/config.yaml ainblockchain/ain-connect-base:<TAG>
-// For Docker
-docker run -d --name worker-docker -v {/PATH/TO/CONFIG}:/worker/env.json -v /var/run/docker.sock:/var/run/docker.sock ainblockchain/ain-connect-base:<TAG>
+docker run -d --name worker -e CLUSTER_NAME={CLUSTER_NAME} \
+-e MNEMONIC={MNEMONIC} \
+-e IS_DOCKER={IS_DOCKER} \
+-e NODE_PORT_IP={NODE_PORT_IP}
+-e REGISTRY_USERNAME={REGISTRY_USERNAME}
+-e REGISTRY_PASSWORD={REGISTRY_PASSWORD}
+-e REGISTRY_SERVER={REGISTRY_SERVER}
+-e GATEWAY_NAME={GATEWAY_NAME}
+-e SLACK_WEBHOOK_URL={REGISTRY_USERNAME} -v {k8s config path}:/root/.kube/config ainblockchain/ain-connect-base
+
 ```
-- /PATH/TO/CONFIG에 env.sample.json을 참고하여 파일을 생성한다.
+- CLUSTER_NAME 과 MNEMONIC 는 필수이다.
+- Kubernetes 버전 Worker 인 경우 "-v {k8s config path}:/root/.kube/config" 는 필수이다.
+- Kubernetes 버전 Worker인 경우 GATEWAY_NAME 를 설정할 수 있으면 default 는 worker-gw 이다.
+- Docker 버전 Worker 인 경우 IS_DOCKER 에 true로 설정하고, NODE_PORT_IP가 필수이다.
+- private 레지스트리와 연결하고 싶으면 REGISTRY_USERNAME, REGISTRY_PASSWORD, REGISTRY_SERVER 를 설정한다.
+- Worker 로그를 슬랙 알림으로 받고 싶다면 SLACK_WEBHOOK_URL 를 설정한다.
+- 환경변수를 파일로 전달하고 싶다면 '-v {json path}:/worker/env.json' 를 추가한다.
+
+
+## 쿠버네티스에서 시작
+- /k8s.worker.sample.yaml 를 참고하여 {{{ }}} 로 표시된 변수를 채운다.
 
 ## 유닛 테스트 실행
 ```

@@ -28,23 +28,24 @@ program.command('serve').action(async () => {
         username: constants.REGISTRY_USERNAME,
       };
     }
+
     let mnemonic;
     if (!constants.MNEMONIC) {
       // Update Env File (Add AIN_PRIVATE_KEY and AIN_ADDRESS).
       mnemonic = generateMnemonic();
       const newEnv = {
-        ...constants.ENV,
+        ...constants.envFileData,
         MNEMONIC: mnemonic,
       };
       fs.truncateSync(constants.ENV_PATH, 0);
       fs.appendFileSync(constants.ENV_PATH, JSON.stringify(newEnv, null, 2));
     }
+
     const worker = Worker.getInstance({
       clusterName: constants.CLUSTER_NAME as string,
       mnemonic: constants.MNEMONIC || mnemonic,
       dockerAuth,
-    }, constants.NODE_ENV as Types.NODE_ENV,
-    constants.CONFIG_PATH);
+    }, constants.NODE_ENV as Types.NODE_ENV);
     if (constants.IS_DOCKER && constants.IS_DOCKER.toLowerCase() === 'true') {
       await worker.startForDocker();
     } else {

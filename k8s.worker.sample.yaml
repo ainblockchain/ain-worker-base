@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata: 
+  name: ain-worker
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ain-worker
+  namespace: ain-worker
+type: Opaque
+stringData:
+  config: |
+    {{{ K8s Config }}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ain-worker
+    templateVersion: "1"
+  name: ain-worker
+  namespace: ain-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ain-worker
+  template:
+    metadata:
+      labels:
+        app: ain-worker
+    spec:
+      nodeSelector:
+        {{{ nodeSelector }}}
+      volumes:
+      - name: k8sconfig
+        secret:
+          secretName: ain-worker
+      containers:
+      - image: {{{ ainblockchain/ain-worker-base-staging(Staging) or ainblockchain/ain-worker-base(Prod) }}}
+        imagePullPolicy: Always
+        name:  ain-worker
+        volumeMounts:
+        - name: k8sconfig
+          mountPath: "/root/.kube/"
+          readOnly: true
+        env:
+        - name: CLUSTER_NAME
+          value: {{{ CLUSTER_NAME }}}
+        - name: MNEMONIC
+          value: {{{ MNEMONIC }}}
+        - name: GATEWAY_NAME
+          value: {{{ MNEMONIC }}}
+        - name: NODE_ENV
+          value: {{{ NODE_ENV('staging' or 'prod') }}}

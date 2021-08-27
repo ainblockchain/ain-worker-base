@@ -133,3 +133,4 @@ k8s_start.sh
 firebase.json
 temp
 initKubeYaml
+k8s.worker.yaml
