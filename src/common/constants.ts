@@ -1,62 +1,87 @@
 import * as fs from 'fs';
 
-export const ENV_PATH = './env.json';
+export const SHARED_PARH = `${process.env.HOME}/ain-worker/${process.env.NAME}`;
+export const ENV_PATH = `${SHARED_PARH}/env.json`;
 
 export const envFileData = fs.existsSync(ENV_PATH)
   ? JSON.parse(String(fs.readFileSync(ENV_PATH))) : {};
 
+// ENV File < ENV Variable
 const env = {
   ...envFileData,
   ...process.env,
 };
 
 export const {
-  CLUSTER_NAME,
+  NAME,
   MNEMONIC,
+  ETH_ADDRESS,
+  MANAGED_BY,
+  CONTAINER_MAX_CNT,
+  CONTAINER_VCPU,
+  CONTAINER_MEMORY_GB,
+  CONTAINER_GPU_CNT,
+  CONTAINER_STORAGE_GB,
+  CONTAINER_ALLOW_PORT,
+  GPU_DEVICE_NUMBER,
   REGISTRY_USERNAME,
   REGISTRY_PASSWORD,
   REGISTRY_SERVER,
-  IS_DOCKER,
-  SLACK_WEBHOOK_URL,
+  IS_K8S,
+  ROOT_DOMAIN,
   NODE_PORT_IP,
   GATEWAY_NAME,
-  STORAGE_CLASS,
+  SLACK_WEBHOOK_URL,
 } = env;
 
-export const NODE_ENV = process.env.NODE_ENV || 'prod';
+export const NETWORK_TYPE = process.env.NETWORK_TYPE || 'MAINNET';
 
-export const FIREBASE_CONFIG = (NODE_ENV === 'staging') ? {
-  apiKey: 'AIzaSyDa6-Muw27_oczpCHOe8kVAZzuQ5BgCkS4',
-  authDomain: 'ain-connect-api-server-dev.firebaseapp.com',
-  databaseURL: 'https://ain-connect-api-server-dev.firebaseio.com',
-  projectId: 'ain-connect-api-server-dev',
-  storageBucket: 'ain-connect-api-server-dev.appspot.com',
-  messagingSenderId: '799118803554',
-  appId: '1:799118803554:web:508677f48e6bdf5e5b473b',
-  measurementId: 'G-9DZCTCN5FH',
-} : {
-  apiKey: 'AIzaSyDsYGMurjKosgDisnXN5PkPDB8hb34qXDc',
-  authDomain: 'ain-connect-api-server.firebaseapp.com',
-  databaseURL: 'https://ain-connect-api-server.firebaseio.com',
-  projectId: 'ain-connect-api-server',
-  storageBucket: 'ain-connect-api-server.appspot.com',
-  messagingSenderId: '992952534673',
-  appId: '1:992952534673:web:82d9f7b070d70506066130',
-  measurementId: 'G-ZZWBE57SGE',
-};
+export const K8S_CONFIG_PATH = process.env.K8S_CONFIG_PATH || '/root/.kube/config';
 
-export const error = {
-  unauthorized: '2',
-  invalidParams: '1',
-  failed: '-1',
-};
-
-export const MAX_IMAGE_COUNT = 3;
+export const LABEL_FOR_OWNER = 'AinConnect.ownerAddress';
+export const LABEL_FOR_AIN_CONNECT = 'AinConnect.container';
 
 export const validateConstants = () => {
-  if (!CLUSTER_NAME
-    || (!['prod', 'staging'].includes(NODE_ENV || '') && CLUSTER_NAME !== '')) {
-    return false;
+  let checkData = {
+    NAME,
+    ETH_ADDRESS,
+  } as any;
+
+  if (!IS_K8S) {
+    checkData = {
+      ...checkData,
+      CONTAINER_MAX_CNT,
+      CONTAINER_VCPU,
+      CONTAINER_MEMORY_GB,
+      CONTAINER_STORAGE_GB,
+      NODE_PORT_IP,
+    };
+  } else {
+    checkData = {
+      ...checkData,
+      GATEWAY_NAME,
+      ROOT_DOMAIN,
+    };
   }
-  return true;
+
+  if (CONTAINER_GPU_CNT) {
+    checkData = {
+      ...checkData,
+      GPU_DEVICE_NUMBER,
+    };
+  }
+
+  const missingEnv = [];
+  for (const [envName, envValue] of Object.entries(checkData)) {
+    if (!envValue) {
+      missingEnv.push(envName);
+    }
+  }
+  if (missingEnv.length !== 0) {
+    throw new Error(`${String(missingEnv)} Not Exists`);
+  }
+
+  if (!['MAINNET', 'TESTNET'].includes(NETWORK_TYPE)) {
+    throw new Error(`Invalid NETWORK_TYPE [${NETWORK_TYPE} ("MAINNET" or "TESTNET")]`);
+  }
 };

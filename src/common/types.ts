@@ -1,40 +1,101 @@
 import * as k8s from '@kubernetes/client-node';
-import * as ConnectSdk from '@aindev/connect-sdk';
 
-export type NODE_ENV = 'prod' | 'staging';
-
-export type ClusterType = 'aws' | 'gcp' | 'azure' | 'on-premise';
-
-export type WorkerInfo = {
-  clusterName: string; // Unique!
-  mnemonic: string;
-  dockerAuth?: {
-    username: string;
-    password: string;
-    server: string; // Reposity Address
-  };
+export type GPUInfo = {
+  [deviceNumber: string]: {
+    driverVersion: string;
+    memoryUsed: number;
+    memoryTotal: number;
+    gpuName: string;
+  }
 }
 
-// k8s
-export type K8sResourceType = 'namespace' | 'deployment' | 'service' | 'virtualService' | 'storage' | 'persistentVolumeClaim' | 'persistentVolume';
+// For Docker.
+
+export type DockerAllowPort = {
+  [port: string]: boolean; // True: Available Port, False: Used Port.
+}
+
+export type DockerAllowGPUDevice = {
+  [deviceId: string]: boolean; // True: Available Device, False: Used Device.
+}
+
+export type ContainerInfo = {
+  [containerId: string]: {
+    imagePath: string;
+    extenalPorts: string[];
+    GPUDeviceId: string[];
+    started: boolean;
+  }
+}
+
+export type DockerRunParams = {
+  containerId: string;
+  imagePath: string;
+  resourceLimit: {
+    vcpu: number;
+    memoryGB: number;
+    gpuCnt: number;
+  }
+  envs?: {[key: string]: string};
+  command?: string[];
+  ports: number[];
+  labels?: {[key: string]: string};
+}
+
+export type JobCreateContainerForDocker = {
+  containerId: string;
+  imagePath: string;
+  envs?: {[key: string]: string};
+  command?: string[];
+  ports: number[];
+  labels?: {[key: string]: string};
+}
+
+export type JobDeleteContainerForDocker = {
+  containerId: string;
+}
+
+export type JobGetContainerForDocker = {
+  containerId: string;
+}
+
+// For Kubernetes
 
 /**
- * CPU: 'm', MEMORY: 'Mi'
-*/
-export type HwSpec = {
-  cpu: number;
-  gpu: number;
-  memory: number;
-};
-
-/**
- * CPU: 'm', MEMORY: 'Mi'
-*/
+ * HwSpec Type in K8s response.
+ */
 export type HwK8sSpec = {
   cpu: string;
   'nvidia.com/gpu': string;
   memory: string;
 };
+
+export type HwSpec = {
+  cpuM: number;
+  gpuCnt: number;
+  memoryGB: number;
+};
+
+export type StorageSpec = {
+  [storageId: string]: {
+    mountPath: string, // For Container.
+    subPath?: string, // For Storage.
+    readOnly?: 0 | 1,
+  }
+}
+
+export type K8SCreateWorkspaceParams = {
+  containerId: string;
+  namespaceId: string;
+  imagePath: string;
+  ports: number[];
+  resourceLimit: HwSpec;
+  storageSpec?: StorageSpec;
+  envs?: {[key: string]: string};
+  labels?: {[key: string]: string};
+  nodeSelectors?: {[key: string]: string}; // Labels For Selecting Node.
+  applyToleration?: boolean; // Node Toleration.
+}
 
 /**
  * @param path: NFS Base Path.
@@ -45,34 +106,19 @@ export type NfsInfo = {
   server: string;
 }
 
-/**
- * @param storageGb: Storage Capacity.
- * @param accessModes: (ReadWriteMany: Multi-node access, ReadWriteOnce: Single-node access).
- * @param nfsInfo: NFS Info.
-*/
-export type StorageConfig = {
-  capacity: number,
-  storageClassName: string;
-  accessModes: 'ReadWriteMany' | 'ReadWriteOnce';
+export type K8SCreateStorageParams = {
+  storageId: string;
+  namespaceId: string;
+  capacityGB: number;
   nfsInfo?: NfsInfo;
-  labels?: {[key: string]: string };
+  labels: {[key: string]: string};
 }
 
-export type DockerAuthInfo = {
-  username: string;
-  password: string;
-  server: string;
-}
-
-/**
- * @param env: Container Environment.
- * @param replicas: Number of Pods.
- * @param imagePath: Container Docker image Path.
-*/
-export type DeploymentConfig = {
-  env?: Object;
-  replicas?: number;
-  imageName?: string;
+export type K8SEditWorkspaceParams = {
+  containerId: string;
+  namespaceId: string;
+  imagePath: string;
+  envs?: {[key: string]: string};
   storageSpec?: StorageSpec;
 }
 
@@ -82,7 +128,7 @@ export type PodInfo = {
   targetNodeName: string;
   resourcelimits: HwSpec,
   labels: { [key: string]: string },
-  appName: string,
+  containerId: string,
   name: string,
   namespaceId: string,
   status: {
@@ -90,58 +136,18 @@ export type PodInfo = {
     message?: string,
     containerStatuses?: k8s.V1ContainerStatus[],
   },
-  image: string,
+  imagePath: string,
 }
+
 export type GetPodInfo = {
   updatedAt: number;
   params: {
     namespaceId: string;
     podName: string;
     status: {
-      phase: ConnectSdk.types.PodPhaseList;
+      phase: PodPhase;
     }
   };
-}
-
-export type ContainerSpec = {
-  imagePath: string, // DOCKER IMAGE URL
-  resourceLimits: HwK8sSpec,
-  env?: Object, // { ENV_NAME: ENV_VALUE }
-  ports?: number[], // Internal Port List
-}
-
-export type StorageSpec = {
-  [storageId: string]: {
-    mountPath: string, // to Container
-    subPath?: string,
-    readOnly?: 0 | 1,
-  }
-}
-
-export type SecretSpecs = {
-  [secretId: string]: {
-    mountPath: string, // to Container
-  }
-}
-
-/**
- * @param storageSpec: Storage Info for mounting storage to Container.
- * @param secretSpec: Secret Info for mounting storage to Container.
- * @param imagePullSecretName: Secret Name about private Docker registry.
- * @param labels: deploy,pod labels
- * @param nodePoolLabel: param for select nodePool.
- * @param replicas: Number of Pods.
- * @param privileged: root authority.
-*/
-export type DeploymentCreateConfig = {
-  storageSpec?: StorageSpec;
-  secretSpec?: SecretSpecs
-  imagePullSecretName?: string;
-  labels?: {[key: string]: string};
-  nodePoolLabel?: Object;
-  replicas?: number;
-  privileged?: boolean;
-  strategy?: 'RollingUpdate' | 'Recreate';
 }
 
 export type HwStatus = {
@@ -159,35 +165,30 @@ export type NodePool = {
   }
 };
 
-/*
-  Available -- a free resource that is not yet bound to a claim
-  Bound     -- the volume is bound to a claim
-  Released  -- the claim has been deleted, but the resource is not yet reclaimed by the cluster
-  Failed    -- the volume has failed its automatic reclamation
-*/
-export type StorageStatus = 'Available' | 'Bound' | 'Released' | 'Failed';
-
-export type StorageInfo = {
-  appName: string,
-  status: StorageStatus,
-  labels: {[key: string]: string},
-  claim?: {
-    name: string,
-    namespaceId: string,
-  },
-}
-
-export type NetworkConfig = {
-  ipConfig?: {
-    ipBlock: string,
-    cidr: string[]
-  },
-  podLabel?: { [key: string]: string },
-  namespaceSelector?: { [key: string]: string },
-}
-
 export type KubectlCommandResult = {
   stdout: string,
   stderr: string,
   statusCode: number,
+}
+
+export type JobDeleteStorageForK8S = {
+  namespaceId: string;
+}
+
+export type JobDeleteWorkspaceForK8S = {
+  containerId: string;
+  namespaceId: string;
+}
+
+export type JobGetWorkspaceForK8S = {
+  containerId: string;
+  namespaceId: string;
+}
+
+export type JobGetNodepoolForK8S = {
+  nodePoolLabel: string;
+}
+
+export type JobRunKubectlCommandForK8S = {
+  cmd: string;
 }

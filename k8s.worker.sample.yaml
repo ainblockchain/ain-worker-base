@@ -22,6 +22,8 @@ metadata:
   name: ain-worker
   namespace: ain-worker
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -38,7 +40,7 @@ spec:
         secret:
           secretName: ain-worker
       containers:
-      - image: {{{ ainblockchain/ain-worker-base-staging(Staging) or ainblockchain/ain-worker-base(Prod) }}}
+      - image: {{{ WORKER IMAGE PATH }}}
         imagePullPolicy: Always
         name:  ain-worker
         volumeMounts:
@@ -46,11 +48,22 @@ spec:
           mountPath: "/root/.kube/"
           readOnly: true
         env:
-        - name: CLUSTER_NAME
-          value: {{{ CLUSTER_NAME }}}
+        - name: IS_K8S
+          value: "true"
+        - name: NETWORK_TYPE
+          value: {{{ NETWORK_TYPE ('MAINNET' or 'TESTNET') }}}
+        - name: NAME
+          value: {{{ NAME }}}
         - name: MNEMONIC
           value: {{{ MNEMONIC }}}
         - name: GATEWAY_NAME
-          value: {{{ MNEMONIC }}}
-        - name: NODE_ENV
-          value: {{{ NODE_ENV('staging' or 'prod') }}}
+          value: {{{ GATEWAY_NAME }}}
+        - name: ROOT_DOMAIN
+          value: {{{ ROOT_DOMAIN }}}
+        - name: ETH_ADDRESS
+          value: {{{ ETH_ADDRESS }}}
+        - name: SLACK_WEBHOOK_URL
+          value: {{{ (optional) SLACK_WEBHOOK_URL }}}
+  
+
+  

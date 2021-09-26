@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ namespaceId }}
+  labels:
+  {{# labels }}
+    {{ key }}: "{{ value }}"
+  {{/ labels }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ storageId }}
+  namespace: {{ namespaceId }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ capacityGB }}Gi
