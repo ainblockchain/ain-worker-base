@@ -154,12 +154,3 @@ npm publish --access=public
 - _test_: 유닛 테스트 코드
 
 <br>
-
-IS_K8S=true \
-NETWORK_TYPE=TESTNET \
-NAME=donghyeonk8s \
-ETH_ADDRESS=0x363406b13f6000299BCB832b16D5fF9862b4C77F \
-GATEWAY_NAME=worker-gw \
-ROOT_DOMAIN="c2.dev.connect.ainize.ai" \
-K8S_CONFIG_PATH="/Users/donghyeon/code/comcom/ain/ain-worker-base/config.yaml" \
-yarn start
