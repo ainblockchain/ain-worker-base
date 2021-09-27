@@ -3,8 +3,8 @@ import Logger from './common/logger';
 import Docker from './util/docker';
 import * as constants from './common/constants';
 import * as utils from './util/utils';
-import dockerJobHandler from './job/docker';
-import k8sWorkspaceJobHandler from './job/workspace-for-k8s';
+import dockerJobHandler, * as JobDocker from './job/docker';
+import k8sWorkspaceJobHandler, * as jobK8sWorkspace from './job/workspace-for-k8s';
 import ErrorDetailCode from './common/errorCode';
 
 const log = Logger.createLogger('/worker');
@@ -76,7 +76,7 @@ export default class WorkerBase {
       NETWORK_TYPE: ${constants.NETWORK_TYPE}
       Worker Name: ${constants.NAME}
       Worker Address: ${this.connectSdk.getConnect().getAddress()}
-      IS_K8S: ${(constants.IS_K8S) ? 'yes' : 'no'}
+      IS_K8S: ${(constants.IS_K8S) ? 'Yes' : 'No'}
     )`);
   }
 
@@ -108,14 +108,25 @@ export default class WorkerBase {
       } : null,
       labels: {
         managedBy: constants.MANAGED_BY || 'none',
+        isK8s: constants.IS_K8S || null,
       },
     });
   }
 
   private async updateStatus() {
-    // await this.connectSdk.updateStatus({
-    //   currentNumberOfContainer: (constants.IS_K8S) ? 0 : Docker.getInstance().getContainerCnt(),
-    // });
+    if (constants.IS_K8S) {
+      const containerStatus = await jobK8sWorkspace.getAllContainerStatus();
+      await this.connectSdk.updateStatus({
+        containerStatus,
+        currentNumberOfContainer: Object.keys(containerStatus).length,
+      });
+    } else {
+      const containerStatus = await JobDocker.getAllContainerStatus();
+      await this.connectSdk.updateStatus({
+        containerStatus,
+        currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
+      });
+    }
   }
 
   private async requestHandler(ref: string, value: ConnectSdk.types.ListenRequestQueueValue) {

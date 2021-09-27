@@ -13,6 +13,16 @@
 
 <br>
 
+
+# 코드 구조 설명 (src)
+- src/common: 공통으로 사용하는 모듈 및 변수 모음.
+- src/job: 요청 Job 로직 모음.
+- src/util: 여러 유틸 코드 모음으로, Docker 나 kubernetes 같은 로직이 포함되어 있음.
+- src/index.ts: 코드 진입점.
+- src/worker.ts: AIN Connect 관련 로직.
+- test: 유닛 테스트 코드
+<br>
+
 ## 환경변수
 NETWORK_TYPE: "MAINNET" or "TESTNET"
 NAME: Worker 고유 이름
@@ -36,9 +46,7 @@ GATEWAY_NAME: ISTIO Gateway 이름.
 SLACK_WEBHOOK_URL: (optional) Worker 의 Info 와 Error 로그를 Slack 으로 알림 받고 싶을 때 필요한 옵션.
 K8S_CONFIG_PATH: (optional) Kubernetes Config 파일 경로이며, 기본은 /root/.kube/config 이다.
 
-
-
-## 시작
+## How To
 ### Docker 버전 Worker 시작
 
 #### Docker 로 시작
@@ -137,20 +145,3 @@ yarn test
 ```
 yarn lint
 ```
-
-## NPM 배포
-```
-./build
-// (1) 버전을 확인한다.
-npm publish --access=public
-```
-- npm login을 한다.
-
-
-# 코드 구조 설명 (src)
-- common: 공통으로 사용하는 모듈 및 변수 모음
-- manager: 관리 로직 모음
-- util: 기능 로직 모음
-- _test_: 유닛 테스트 코드
-
-<br>

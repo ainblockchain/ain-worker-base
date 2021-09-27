@@ -312,39 +312,17 @@ EOF`;
   /**
    * Get All Pod Information.
   */
-  async getAllPodInfoList() {
-    const url = `${this.config.getCurrentCluster()!.server}/api/v1/pods`;
-
-    return new Promise<types.PodInfo[]>((resolve, reject) => {
-      const opts = {
-        timeout: 10000,
-      } as request.Options;
-      this.config.applyToRequest(opts);
-      request.get(url, opts,
-        (error, _response, _body) => {
-          if (error) {
-            reject(error);
-          }
-          try {
-            const podInfos = [];
-            let jsonData;
-            try {
-              jsonData = JSON.parse(_body);
-            } catch (err) {
-              reject(err);
-            }
-            for (const item of jsonData.items) {
-              const podInfo = this.parsePodInfo(item);
-              if (podInfo) {
-                podInfos.push(podInfo);
-              }
-            }
-            resolve(podInfos);
-          } catch (err) {
-            reject(err);
-          }
-        });
-    });
+  async getAllPodInfoList(labels?: string) {
+    const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
+    const res = await coreApi.listPodForAllNamespaces(undefined, undefined, undefined, labels);
+    const podInfos = [];
+    for (const item of res.body.items) {
+      const podInfo = this.parsePodInfo(item);
+      if (podInfo) {
+        podInfos.push(podInfo);
+      }
+    }
+    return podInfos;
   }
 
   async getNodepoolInfo(nodePoolLabel: string) {

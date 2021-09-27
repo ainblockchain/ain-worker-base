@@ -3,6 +3,16 @@ import * as types from '../common/types';
 import * as constants from '../common/constants';
 import Docker from '../util/docker';
 
+export async function getAllContainerStatus() {
+  const containerList = await Docker.getInstance().getAllContainerInfo(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
+  const containerStatus = {};
+  containerList.forEach((container) => {
+    const containerId = container.Names[0].replace('/', '');
+    containerStatus[containerId] = container.State;
+  });
+  return containerStatus;
+}
+
 async function createContainer(params: types.JobCreateContainerForDocker, userAinAddress: string) {
   const result = await Docker.getInstance().run({
     ...params,

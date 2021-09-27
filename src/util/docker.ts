@@ -247,6 +247,16 @@ export default class Docker {
   }
 
   /**
+   * Get ALL Container Information By Labels.
+   */
+    getAllContainerInfo = async (labels?: string) => {
+      const containerInfoList = await this.dockerode.listContainers({
+        labels,
+      });
+      return containerInfoList;
+    }
+
+  /**
    * Get Container Information By Container Label.
    */
   getContainerInfosByLabel = async (label: string) => {
