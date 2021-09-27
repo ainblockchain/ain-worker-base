@@ -24,27 +24,27 @@
 <br>
 
 ## 환경변수
-NETWORK_TYPE: "MAINNET" or "TESTNET"
-NAME: Worker 고유 이름
-ETH_ADDRESS: 보상을 받은 이더리움 주소.
-MNEMONIC: 지갑을 복구하기 위한 12개의 단어로 단어 사이를 띄어쓰기로 구분한다. (ex 'apple bike ...)
-MANAGED_BY: (optional) Worker 관리 주체.
-NODE_PORT_IP: 컨테이너 접근을 위한 IP 로, Docker 버전인 경우 Worker 가 셋업된 머신에 IP 이다.
-CONTAINER_MAX_CNT: 컨테이너 최대 개수로, Docker 버전 Worker 인 경우 필수 옵션.
-CONTAINER_VCPU: 한 컨테이너 Core 개수, Docker 버전 Worker 인 경우 필수 옵션.
-CONTAINER_MEMORY_GB: 한 컨테이너 메모리 용량(GB 단위), Docker 버전 Worker 인 경우 필수 옵션.
-CONTAINER_GPU_CNT: 한 컨테이너 GPU 개수.
-GPU_DEVICE_NUMBER: GPU Device IDs 로 ID 사이를 ','로 구분한다. (ex. 1,2,3...)
-CONTAINER_STORAGE_GB: 한 컨테이너 스토리지 용량(단위 GB), Docker 버전 Worker 인 경우 필수 옵션.
-CONTAINER_ALLOW_PORT: 사용 가능한 외부 포트들로 포트 범위는 '-'로 구분하고, 각 범위들은 ',' 로 구분한다. ex. '80-83,8888-88889'
-REGISTRY_USERNAME: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
-REGISTRY_PASSWORD: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
-REGISTRY_SERVER: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
-IS_K8S: Kubernertes 버전 Worker 인 경우 True 로 설정하는 옵션.
-ROOT_DOMAIN: Kuberntes 버전에서 ISTIO Gateway 의 Root 도메인 (*.${ROOT_DOMAIN})
-GATEWAY_NAME: ISTIO Gateway 이름.
-SLACK_WEBHOOK_URL: (optional) Worker 의 Info 와 Error 로그를 Slack 으로 알림 받고 싶을 때 필요한 옵션.
-K8S_CONFIG_PATH: (optional) Kubernetes Config 파일 경로이며, 기본은 /root/.kube/config 이다.
+- NETWORK_TYPE: "MAINNET" or "TESTNET"
+- NAME: Worker 고유 이름
+- ETH_ADDRESS: 보상을 받은 이더리움 주소.
+- MNEMONIC: 지갑을 복구하기 위한 12개의 단어로 단어 사이를 띄어쓰기로 구분한다. (ex 'apple bike ...)
+- MANAGED_BY: (optional) Worker 관리 주체.
+- NODE_PORT_IP: 컨테이너 접근을 위한 IP 로, Docker 버전인 경우 Worker 가 셋업된 머신에 IP 이다.
+- CONTAINER_MAX_CNT: 컨테이너 최대 개수로, Docker 버전 Worker 인 경우 필수 옵션.
+- CONTAINER_VCPU: 한 컨테이너 Core 개수, Docker 버전 Worker 인 경우 필수 옵션.
+- CONTAINER_MEMORY_GB: 한 컨테이너 메모리 용량(GB 단위), Docker 버전 Worker 인 경우 필수 옵션.
+- CONTAINER_GPU_CNT: 한 컨테이너 GPU 개수.
+- GPU_DEVICE_NUMBER: GPU Device IDs 로 ID 사이를 ','로 구분한다. (ex. 1,2,3...)
+- CONTAINER_STORAGE_GB: 한 컨테이너 스토리지 용량(단위 GB), Docker 버전 Worker 인 경우 필수 옵션.
+- CONTAINER_ALLOW_PORT: 사용 가능한 외부 포트들로 포트 범위는 '-'로 구분하고, 각 범위들은 ',' 로 구분한다. ex. '80-83,8888-88889'
+- REGISTRY_USERNAME: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
+- REGISTRY_PASSWORD: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
+- REGISTRY_SERVER: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
+- IS_K8S: Kubernertes 버전 Worker 인 경우 True 로 설정하는 옵션.
+- ROOT_DOMAIN: Kuberntes 버전에서 ISTIO Gateway 의 Root 도메인 (*.${ROOT_DOMAIN})
+- GATEWAY_NAME: ISTIO Gateway 이름.
+- SLACK_WEBHOOK_URL: (optional) Worker 의 Info 와 Error 로그를 Slack 으로 알림 받고 싶을 때 필요한 옵션.
+- K8S_CONFIG_PATH: (optional) Kubernetes Config 파일 경로이며, 기본은 /root/.kube/config 이다.
 
 ## How To
 ### Docker 버전 Worker 시작
@@ -55,7 +55,7 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name wor
 -e NETWORK_TYPE={NETWORK_TYPE} \
 -e NAME={NAME} \
 -e ETH_ADDRESS={ETH_ADDRESS} \
--e NODE_PORT_IP={NODE_PORT_IP}
+-e NODE_PORT_IP={NODE_PORT_IP} \
 -e CONTAINER_MAX_CNT={CONTAINER_MAX_CNT} \
 -e CONTAINER_VCPU={CONTAINER_VCPU} \
 -e CONTAINER_MEMORY_GB={CONTAINER_MEMORY_GB} \
@@ -68,6 +68,7 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name wor
 [-e REGISTRY_PASSWORD={REGISTRY_PASSWORD}] \
 [-e REGISTRY_SERVER={REGISTRY_SERVER}] \
 [-e SLACK_WEBHOOK_URL={SLACK_WEBHOOK_URL}] \
+[--gpus all]  \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v ~/ain-worker/{NAME}: ~/ain-worker/{NAME} \
 ainblockchain/ain-connect-base:revamp
