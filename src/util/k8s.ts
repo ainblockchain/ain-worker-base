@@ -4,22 +4,22 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as mustache from 'mustache';
 import * as request from 'request';
-import ErrorDetailCode from '../../common/errorCode';
-import * as types from '../../common/types';
-import * as constants from '../../common/constants';
+import ErrorDetailCode from '../common/errorCode';
+import * as types from '../common/types';
+import * as constants from '../common/constants';
 
 const workspaceTemplate = fs.readFileSync(
-  './src/util/k8s/templates/workspace.mustache',
+  'k8s_templates/workspace.mustache',
   { encoding: 'utf-8' },
 );
 
 const storageTemplate = fs.readFileSync(
-  './src/util/k8s/templates/storage.mustache',
+  'k8s_templates/storage.mustache',
   { encoding: 'utf-8' },
 );
 
 const storageForNfsTemplate = fs.readFileSync(
-  './src/util/k8s/templates/storage-for-nfs.mustache',
+  'k8s_templates/storage-for-nfs.mustache',
   { encoding: 'utf-8' },
 );
 

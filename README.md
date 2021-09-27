@@ -68,19 +68,25 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name wor
 [-e REGISTRY_PASSWORD={REGISTRY_PASSWORD}] \
 [-e REGISTRY_SERVER={REGISTRY_SERVER}] \
 [-e SLACK_WEBHOOK_URL={SLACK_WEBHOOK_URL}] \
-[--gpus all]  \
+[--gpus all] \
 -v /var/run/docker.sock:/var/run/docker.sock \
--v ~/ain-worker/{NAME}: ~/ain-worker/{NAME} \
+-v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
 ainblockchain/ain-connect-base:revamp
 ```
 - [] 는 옵셔널 환경 변수이다.
-- MNEMONIC 환경 변수가 없으면 자동으로 /ain-worker/{NAME}/env.json 에 저장한다.
+- MNEMONIC 환경 변수가 없으면 자동으로 $HOME/ain-worker/{NAME}/env.json 에 저장한다.
 - 도커 이미지는 Docker Hub 에 있는 ainblockchain/ain-connect-base 로 하거나 직접 빌드해서 실행한다.
+
+#### 로그
+```
+docker logs -f worker
+```
 
 #### 종료
 ```
 docker rm -f $(docker ps -f "label=AinConnect.container" -q -a)
 ```
+
 
 #### 로컬에서 시작(개발용)
 ```
@@ -92,7 +98,7 @@ yarn
 NETWORK_TYPE={NETWORK_TYPE} \
 NAME={NAME} \
 ETH_ADDRESS={ETH_ADDRESS} \
-NODE_PORT_IP={NODE_PORT_IP}
+NODE_PORT_IP={NODE_PORT_IP} \
 CONTAINER_MAX_CNT={CONTAINER_MAX_CNT} \
 CONTAINER_VCPU={CONTAINER_VCPU} \
 CONTAINER_MEMORY_GB={CONTAINER_MEMORY_GB} \
@@ -146,3 +152,18 @@ yarn test
 ```
 yarn lint
 ```
+
+
+docker run -l AinConnect.container=master -d --restart unless-stopped --name worker \
+-e NETWORK_TYPE=TESTNET \
+-e NAME=ddddd \
+-e ETH_ADDRESS='0x123123123123' \
+-e NODE_PORT_IP=localhost \
+-e CONTAINER_MAX_CNT=1 \
+-e CONTAINER_VCPU=3 \
+-e CONTAINER_MEMORY_GB=10 \
+-e CONTAINER_STORAGE_GB=80 \
+-e CONTAINER_ALLOW_PORT=80 \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $HOME/ain-worker/ddddd:/root/ain-worker/ddddd \
+ainblockchain/ain-connect-base:revamp

@@ -35,6 +35,7 @@ ADD package.json /worker
 ADD yarn.lock /worker
 RUN npm install --only=prod
 COPY --from=build /worker/dist /worker/dist
+ADD ./k8s_templates /worker/k8s_templates
 
  
 CMD ["node", "dist/index.js", "serve"]
