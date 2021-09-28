@@ -38,12 +38,6 @@ export default class Docker {
   }
 
   async init(containerLabel: string) {
-    if (constants.GPU_DEVICE_NUMBER) {
-      await this.checkGPUDocker()
-        .catch((err) => {
-          throw new Error(ErrorDetailCode.GPU_NOT_SUPPORTED);
-        });
-    }
     // Init allowPort
     const portRangeList = constants.CONTAINER_ALLOW_PORT.split(',');
     for (const portRange of portRangeList) {
@@ -58,6 +52,14 @@ export default class Docker {
     for (const deviceId of deviceIdList) {
       this.allowGPUDevice[deviceId] = true;
     }
+
+    if (constants.GPU_DEVICE_NUMBER) {
+      await this.checkGPUDocker()
+        .catch((err) => {
+          throw new Error(ErrorDetailCode.GPU_NOT_SUPPORTED);
+        });
+    }
+
     // Init containerInfo
     const connectContainers = await this.getContainerInfosByLabel(containerLabel);
     for (const connectContainer of connectContainers) {
@@ -134,7 +136,7 @@ export default class Docker {
       gpuDeviceNumbers.push(gpuDeviceNum);
     }
 
-    const cpuFirstCore = `${(this.getContainerCnt() * resourceLimit.vcpu) + 1}`;
+    const cpuFirstCore = `${(this.getContainerCnt() * resourceLimit.vcpu)}`;
     this.containerInfo[containerId] = {
       imagePath,
       extenalPorts: Object.keys(publishPorts),
@@ -216,6 +218,17 @@ export default class Docker {
       });
     }
     await containerHandler.remove({ force: true });
+    if (this.containerInfo[containerId].extenalPorts) {
+      this.containerInfo[containerId].extenalPorts.forEach((port) => {
+        this.allowPorts[port] = true;
+      });
+    }
+
+    if (this.containerInfo[containerId].GPUDeviceId) {
+      this.containerInfo[containerId].GPUDeviceId.forEach((id) => {
+        this.allowGPUDevice[id] = true;
+      });
+    }
     delete this.containerInfo[containerId];
   }
 
@@ -245,16 +258,6 @@ export default class Docker {
       ...this.containerInfo[containerId],
     };
   }
-
-  /**
-   * Get ALL Container Information By Labels.
-   */
-    getAllContainerInfo = async (labels?: string) => {
-      const containerInfoList = await this.dockerode.listContainers({
-        labels,
-      });
-      return containerInfoList;
-    }
 
   /**
    * Get Container Information By Container Label.

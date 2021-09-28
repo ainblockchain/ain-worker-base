@@ -23,7 +23,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@ainblockchain/connect-sdk": "0.2.0",
+    "@ainblockchain/connect-sdk": "0.4.0",
     "@kubernetes/client-node": "0.13.2",
     "@types/bip39": "^3.0.0",
     "@types/dockerode": "^3.2.1",

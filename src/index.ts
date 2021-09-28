@@ -24,6 +24,7 @@ program.command('serve').action(async () => {
     await worker.start();
   } catch (err) {
     log.error(`[-] Failed to Start - ${err.message}`);
+    process.exit(1);
   }
 });
 

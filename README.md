@@ -152,18 +152,3 @@ yarn test
 ```
 yarn lint
 ```
-
-
-docker run -l AinConnect.container=master -d --restart unless-stopped --name worker \
--e NETWORK_TYPE=TESTNET \
--e NAME=ddddd \
--e ETH_ADDRESS='0x123123123123' \
--e NODE_PORT_IP=localhost \
--e CONTAINER_MAX_CNT=1 \
--e CONTAINER_VCPU=3 \
--e CONTAINER_MEMORY_GB=10 \
--e CONTAINER_STORAGE_GB=80 \
--e CONTAINER_ALLOW_PORT=80 \
--v /var/run/docker.sock:/var/run/docker.sock \
--v $HOME/ain-worker/ddddd:/root/ain-worker/ddddd \
-ainblockchain/ain-connect-base:revamp

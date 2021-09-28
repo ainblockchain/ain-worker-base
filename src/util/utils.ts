@@ -35,8 +35,8 @@ export async function getGpuInfo(): Promise<types.GPUInfo> {
       result[String(idx)] = {
         gpuName: dataList[0],
         driverVersion: dataList[1],
-        memoryUsed: Number(dataList[2]),
-        memoryTotal: Number(dataList[3]),
+        memoryUsed: parseInt(dataList[2], 10),
+        memoryTotal: parseInt(dataList[3], 10),
       };
       idx += 1;
     }

@@ -42,10 +42,6 @@ export default class WorkerBase {
   public async init() {
     if (!constants.IS_K8S) {
       const gpuInfo = await utils.getGpuInfo();
-      const cpuInfo = await utils.getCpuInfo();
-      if (cpuInfo.physicalCores < Number(constants.CONTAINER_VCPU)) {
-        throw new Error(ErrorDetailCode.NOT_ENOUGH_VCPU);
-      }
       if (constants.GPU_DEVICE_NUMBER) {
         const deviceIdList = constants.GPU_DEVICE_NUMBER.split(',');
         for (const deviceId of deviceIdList) {
