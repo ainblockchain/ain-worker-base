@@ -302,12 +302,27 @@ export default class Docker {
         serveraddress: constants.REGISTRY_SERVER,
       };
     }
-    try {
-      await this.dockerode.pull(imagePath, { authconfig });
-    } catch (err) {
+    const pullMethod = () => new Promise<number>((resolve, _) => {
+      this.dockerode.pull(imagePath, { authconfig }, async (err: any, stream: any) => {
+        function onFinished() {
+          if (err) {
+            resolve(103);
+          } else {
+            resolve(0);
+          }
+        }
+        if (err) {
+          resolve(103);
+        } else {
+          await this.dockerode.modem.followProgress(stream, onFinished);
+        }
+      });
+    });
+    const result = await pullMethod();
+    if (result === 0) {
       this.dockerImagePathList = this.dockerImagePathList.filter((item) => item !== imagePath);
-      throw err;
     }
+    return result;
   }
 
   /**
