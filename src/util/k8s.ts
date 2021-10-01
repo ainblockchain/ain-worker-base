@@ -131,10 +131,10 @@ export default class Api {
   /**
    * Get Pod Info About Workspace With pod phase..
    */
-  async getWorkspaceInfo(containerId: string, namepsaceId: string) {
+  async getWorkspaceInfo(containerId: string, namespaceId: string) {
     const coreApi = this.config.makeApiClient(k8s.CoreV1Api);
     const res = await coreApi.listNamespacedPod(
-      namepsaceId, undefined, undefined, undefined, undefined, `app=${containerId}`,
+      namespaceId, undefined, undefined, undefined, undefined, `app=${containerId}`,
     );
     const podInfo = this.parsePodInfo(res.body.items[0]);
     if (podInfo) {
@@ -344,11 +344,11 @@ EOF`;
               const targetPodInfoList = allPodInfoList
                 .filter((podInfo) => (podInfo.targetNodeName === node.metadata.name));
               const allocatable = {
-                cpuM: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.cpuM)
+                cpuM: targetPodInfoList.map((podInfo) => podInfo.resourceLimits.cpuM)
                   .reduce((current, pre) => pre + current),
-                memoryGB: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.memoryGB)
+                memoryGB: targetPodInfoList.map((podInfo) => podInfo.resourceLimits.memoryGB)
                   .reduce((current, pre) => pre + current),
-                gpuCnt: targetPodInfoList.map((podInfo) => podInfo.resourcelimits.gpuCnt)
+                gpuCnt: targetPodInfoList.map((podInfo) => podInfo.resourceLimits.gpuCnt)
                   .reduce((current, pre) => pre + current),
               };
 
@@ -458,10 +458,10 @@ EOF`;
   parsePodInfo(pod: k8s.V1Pod): types.PodInfo | undefined {
     if (pod.spec && pod.metadata && pod.status && pod.metadata.labels) {
       const { containers } = pod.spec;
-      const resourcelimits = this.getPodLimit(containers);
+      const resourceLimits = this.getPodLimit(containers);
       const podInfo = {
         targetNodeName: pod.spec.nodeName as string,
-        resourcelimits,
+        resourceLimits,
         labels: pod.metadata.labels,
         containerId: pod.metadata.labels.app,
         name: pod.metadata.name as string,

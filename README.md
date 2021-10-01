@@ -28,7 +28,7 @@
 - NAME: Worker 고유 이름
 - ETH_ADDRESS: 보상을 받은 이더리움 주소.
 - MNEMONIC: 지갑을 복구하기 위한 12개의 단어로 단어 사이를 띄어쓰기로 구분한다. (ex 'apple bike ...)
-- MANAGED_BY: (optional) Worker 관리 주체.
+- MANAGED_BY: (optional) manage ID.
 - NODE_PORT_IP: 컨테이너 접근을 위한 IP 로, Docker 버전인 경우 Worker 가 셋업된 머신에 IP 이다.
 - CONTAINER_MAX_CNT: 컨테이너 최대 개수로, Docker 버전 Worker 인 경우 필수 옵션.
 - CONTAINER_VCPU: 한 컨테이너 Core 개수, Docker 버전 Worker 인 경우 필수 옵션.

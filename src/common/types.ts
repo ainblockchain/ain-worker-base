@@ -22,7 +22,7 @@ export type DockerAllowGPUDevice = {
 export type ContainerInfo = {
   [containerId: string]: {
     imagePath: string;
-    extenalPorts: string[];
+    externalPorts: string[];
     GPUDeviceId: string[];
     started: boolean;
   }
@@ -126,7 +126,7 @@ export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown
 
 export type PodInfo = {
   targetNodeName: string;
-  resourcelimits: HwSpec,
+  resourceLimits: HwSpec,
   labels: { [key: string]: string },
   containerId: string,
   name: string,

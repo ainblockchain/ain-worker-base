@@ -71,7 +71,7 @@ export default class Docker {
       this.containerInfo[name] = {
         started: true,
         imagePath,
-        extenalPorts: ports.map((item) => String(item.PublicPort)),
+        externalPorts: ports.map((item) => String(item.PublicPort)),
         GPUDeviceId: (
           HostConfig.DeviceRequests && HostConfig.DeviceRequests[0])
           ? HostConfig.DeviceRequests[0].DeviceIDs || [] : [],
@@ -139,7 +139,7 @@ export default class Docker {
     const cpuFirstCore = `${(this.getContainerCnt() * resourceLimit.vcpu)}`;
     this.containerInfo[containerId] = {
       imagePath,
-      extenalPorts: Object.keys(publishPorts),
+      externalPorts: Object.keys(publishPorts),
       GPUDeviceId: gpuDeviceNumbers,
       started: false,
     };
@@ -209,17 +209,17 @@ export default class Docker {
       throw new Error(ErrorDetailCode.CONTAINER_NOT_STARTED);
     }
     const containerHandler = this.dockerode.getContainer(containerId);
-    const constainerInfo = await containerHandler.inspect();
+    const containerInfo = await containerHandler.inspect();
     if (allowLabels) {
       Object.entries(allowLabels).forEach(([key, value]) => {
-        if (!constainerInfo.Config.Labels[key] || constainerInfo.Config.Labels[key] !== value) {
+        if (!containerInfo.Config.Labels[key] || containerInfo.Config.Labels[key] !== value) {
           throw new Error(ErrorDetailCode.CAN_NOT_ALLOW);
         }
       });
     }
     await containerHandler.remove({ force: true });
-    if (this.containerInfo[containerId].extenalPorts) {
-      this.containerInfo[containerId].extenalPorts.forEach((port) => {
+    if (this.containerInfo[containerId].externalPorts) {
+      this.containerInfo[containerId].externalPorts.forEach((port) => {
         this.allowPorts[port] = true;
       });
     }
