@@ -415,7 +415,7 @@ export default class Api {
     const res = await coreApi.listNamespacedPod(
       namespace, undefined, undefined, undefined, undefined, `app=${appName}`,
     );
-    const podInfo = this.parsePodInfo(res.body);
+    const podInfo = this.parsePodInfo(res.body.items[0]);
     if (podInfo) {
       return podInfo;
     }

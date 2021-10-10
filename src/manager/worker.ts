@@ -802,6 +802,7 @@ export default class WorkerBase {
 
   private updateContainerStatus = async (address: string,
     params: ConnectSdk.types.UpdateContainerStatusParams) => {
+    log.debug(`[+] updateContainerStatus[${address}] params: ${JSON.stringify(params, null, 4)}`);
     const data = await this.k8sApi.getPodInfobyAppName(params.containerId, params.namespaceId);
     log.debug(`[+] updateContainerStatus[${address}] podName: ${data.appName}, status:${data.status.phase}`);
     await this.writePodStatus(data);
