@@ -155,7 +155,6 @@ export default class Docker {
         CpusetCpus: `${cpuFirstCore}-${Number(cpuFirstCore) + resourceLimit.vcpu - 1}`,
         KernelMemoryTCP: resourceLimit.memoryGB * 1000 * 1000,
         PortBindings: {},
-        AutoRemove: true,
         Binds: [],
         ShmSize: 4294967296, // 4GB
         DeviceRequests: (gpuDeviceNumbers.length !== 0) ? [
@@ -264,6 +263,7 @@ export default class Docker {
    */
   getContainerInfosByLabel = async (label: string) => {
     const result = await this.dockerode.listContainers({
+      all: true,
       filters: {
         label: [label],
       },

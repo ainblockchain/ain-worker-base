@@ -34,6 +34,7 @@ async function createContainer(params: types.JobCreateContainerForDocker, userAi
   });
 
   return {
+    containerId: params.containerId,
     endpoint,
   };
 }
@@ -42,6 +43,11 @@ async function deleteContainer(params: types.JobDeleteContainerForDocker, userAi
   await Docker.getInstance().kill(params.containerId, {
     [constants.LABEL_FOR_OWNER]: userAinAddress,
   });
+
+  return {
+    containerId: params.containerId,
+    result: true,
+  };
 }
 
 async function getContainer(params: types.JobGetContainerForDocker) {
@@ -51,6 +57,7 @@ async function getContainer(params: types.JobGetContainerForDocker) {
   const result = await Docker.getInstance().getContainerInfo(params.containerId);
 
   return {
+    containerId: params.containerId,
     imagePath: result.imagePath,
     status: result.State.Status,
   };
