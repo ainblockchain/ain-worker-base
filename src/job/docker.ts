@@ -4,9 +4,9 @@ import * as constants from '../common/constants';
 import Docker from '../util/docker';
 
 export async function getAllContainerInfo() {
-  const containerList = await Docker.getInstance().getContainerInfosByLabel(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
+  const containerList = await Docker.getInstance().getContainerInfosByLabel('aa');
   const containerInfos = {};
-  containerList.forEach((container) => {
+  for (const container of containerList) {
     const containerId = container.Names[0].replace('/', '');
     const ports = container.Ports.map((Port) => Port.PublicPort);
     containerInfos[containerId] = {
@@ -14,7 +14,14 @@ export async function getAllContainerInfo() {
       imagePath: container.Image,
       ports,
     };
-  });
+    if (container.State === 'exited') {
+      const containerDetail = await Docker.getInstance().getContainerInfo(containerId);
+      containerInfos[containerId] = {
+        ...containerInfos[containerId],
+        exitCode: containerDetail.State.ExitCode,
+      };
+    }
+  }
   return containerInfos;
 }
 
