@@ -115,7 +115,6 @@ yarn start
 ```
 - [] 는 옵셔널 환경 변수이다.
 
-
 ### Kubernetes 버전 Worker 시작
 - Kubernetes 에는 기본으로 ISTIO 가 설치 되어 있어야 하고, ISTIO Gateway Setup 와 해당 endpoint 에 대한 와일드카드 도메인이 설정되어 있어야 한다.
 

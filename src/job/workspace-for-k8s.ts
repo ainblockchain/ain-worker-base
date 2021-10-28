@@ -3,14 +3,18 @@ import * as types from '../common/types';
 import * as constants from '../common/constants';
 import Api from '../util/k8s';
 
-export async function getAllContainerStatus() {
+export async function getAllContainerInfo() {
   const podList = await Api.getInstance().getAllPodInfoList(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
-  const containerStatus = {};
+  const containerInfo = {};
   podList.forEach((pod) => {
     const containerId = pod.labels.app;
-    containerStatus[containerId] = pod.status.phase.toLowerCase();
+    containerInfo[containerId] = {
+      status: pod.status.phase.toLowerCase(),
+      imagePath: pod.imagePath,
+      ports: pod.ports,
+    };
   });
-  return containerStatus;
+  return containerInfo;
 }
 
 async function createStorage(params: types.K8SCreateStorageParams, userAinAddress: string) {

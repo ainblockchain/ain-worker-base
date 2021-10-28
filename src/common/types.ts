@@ -131,6 +131,7 @@ export type PodInfo = {
   containerId: string,
   name: string,
   namespaceId: string,
+  ports: number[],
   status: {
     phase: PodPhase,
     message?: string,

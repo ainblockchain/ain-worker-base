@@ -111,15 +111,15 @@ export default class WorkerBase {
 
   private async updateStatus() {
     if (constants.IS_K8S) {
-      const containerStatus = await jobK8sWorkspace.getAllContainerStatus();
+      const containerInfo = await jobK8sWorkspace.getAllContainerInfo();
       await this.connectSdk.updateStatus({
-        containerStatus,
-        currentNumberOfContainer: Object.keys(containerStatus).length,
+        containerInfo,
+        currentNumberOfContainer: Object.keys(containerInfo).length,
       });
     } else {
-      const containerStatus = await JobDocker.getAllContainerStatus();
+      const containerInfo = await JobDocker.getAllContainerInfo();
       await this.connectSdk.updateStatus({
-        containerStatus,
+        containerInfo,
         currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
       });
     }

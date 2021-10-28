@@ -3,14 +3,19 @@ import * as types from '../common/types';
 import * as constants from '../common/constants';
 import Docker from '../util/docker';
 
-export async function getAllContainerStatus() {
+export async function getAllContainerInfo() {
   const containerList = await Docker.getInstance().getContainerInfosByLabel(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
-  const containerStatus = {};
+  const containerInfos = {};
   containerList.forEach((container) => {
     const containerId = container.Names[0].replace('/', '');
-    containerStatus[containerId] = container.State;
+    const ports = container.Ports.map((Port) => Port.PublicPort);
+    containerInfos[containerId] = {
+      status: container.State,
+      imagePath: container.Image,
+      ports,
+    };
   });
-  return containerStatus;
+  return containerInfos;
 }
 
 async function createContainer(params: types.JobCreateContainerForDocker, userAinAddress: string) {
@@ -50,28 +55,12 @@ async function deleteContainer(params: types.JobDeleteContainerForDocker, userAi
   };
 }
 
-async function getContainer(params: types.JobGetContainerForDocker) {
-  if (!Docker.getInstance().getContainerInfoDict()[params.containerId]) {
-    throw new Error(ErrorDetailCode.CONTAINER_NOT_EXIST);
-  }
-  const result = await Docker.getInstance().getContainerInfo(params.containerId);
-
-  return {
-    containerId: params.containerId,
-    imagePath: result.imagePath,
-    status: result.State.Status,
-  };
-}
-
 export default async function handler(type: string, params: any, userAinAddress: string) {
   if (type === 'createContainer') {
     return createContainer(params, userAinAddress);
   }
   if (type === 'deleteContainer') {
     return deleteContainer(params, userAinAddress);
-  }
-  if (type === 'getContainer') {
-    return getContainer(params);
   }
   throw new Error(ErrorDetailCode.FUNCTION_NOT_EXIST);
 }

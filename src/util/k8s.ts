@@ -458,6 +458,8 @@ EOF`;
   parsePodInfo(pod: k8s.V1Pod): types.PodInfo | undefined {
     if (pod.spec && pod.metadata && pod.status && pod.metadata.labels) {
       const { containers } = pod.spec;
+      const ports = containers[0].ports
+        ? containers[0].ports.map((port) => port.containerPort) : [];
       const resourceLimits = this.getPodLimit(containers);
       const podInfo = {
         targetNodeName: pod.spec.nodeName as string,
@@ -466,6 +468,7 @@ EOF`;
         containerId: pod.metadata.labels.app,
         name: pod.metadata.name as string,
         namespaceId: pod.metadata.namespace as string,
+        ports,
         status: {
           phase: pod.status.phase as types.PodPhase,
           message: pod.status.message,
