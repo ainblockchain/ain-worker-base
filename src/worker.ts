@@ -91,7 +91,7 @@ export default class WorkerBase {
         },
         gpu: (constants.CONTAINER_GPU_CNT) ? {
           name: Object.values(gpuInfo)[0].gpuName,
-          memoryGB: Object.values(gpuInfo)[0].memoryTotal,
+          memoryGB: Object.values(gpuInfo)[0].memoryTotal / 1000,
           count: Number(constants.CONTAINER_GPU_CNT),
         } : null,
         memory: {
