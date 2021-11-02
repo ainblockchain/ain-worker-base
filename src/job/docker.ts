@@ -4,7 +4,7 @@ import * as constants from '../common/constants';
 import Docker from '../util/docker';
 
 export async function getAllContainerInfo() {
-  const containerList = await Docker.getInstance().getContainerInfosByLabel('aa');
+  const containerList = await Docker.getInstance().getContainerInfosByLabel(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
   const containerInfos = {};
   for (const container of containerList) {
     const containerId = container.Names[0].replace('/', '');
