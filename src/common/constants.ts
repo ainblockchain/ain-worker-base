@@ -1,10 +1,11 @@
-import * as fs from 'fs';
+import * as fs from "fs";
 
 export const SHARED_PARH = `${process.env.HOME}/ain-worker/${process.env.NAME}`;
 export const ENV_PATH = `${SHARED_PARH}/env.json`;
 
 export const envFileData = fs.existsSync(ENV_PATH)
-  ? JSON.parse(String(fs.readFileSync(ENV_PATH))) : {};
+  ? JSON.parse(String(fs.readFileSync(ENV_PATH)))
+  : {};
 
 // ENV File < ENV Variable
 const env = {
@@ -17,6 +18,7 @@ export const {
   MNEMONIC,
   ETH_ADDRESS,
   MANAGED_BY,
+  SERVICE_TYPE,
   CONTAINER_MAX_CNT,
   CONTAINER_VCPU,
   CONTAINER_MEMORY_GB,
@@ -27,40 +29,35 @@ export const {
   REGISTRY_USERNAME,
   REGISTRY_PASSWORD,
   REGISTRY_SERVER,
-  IS_K8S,
   ROOT_DOMAIN,
   NODE_PORT_IP,
   GATEWAY_NAME,
   SLACK_WEBHOOK_URL,
 } = env;
 
-export const NETWORK_TYPE = process.env.NETWORK_TYPE || 'MAINNET';
+export const NETWORK_TYPE = process.env.NETWORK_TYPE || "MAINNET";
 
-export const K8S_CONFIG_PATH = process.env.K8S_CONFIG_PATH || '/root/.kube/config';
+export const K8S_CONFIG_PATH =
+  process.env.K8S_CONFIG_PATH || "/root/.kube/config";
 
-export const LABEL_FOR_OWNER = 'AinConnect.ownerAddress';
-export const LABEL_FOR_AIN_CONNECT = 'AinConnect.container';
+export const LABEL_FOR_OWNER = "AinConnect.ownerAddress";
+export const LABEL_FOR_AIN_CONNECT = "AinConnect.container";
+export const LABEL_FOR_JOB_TYPE = "AinConnect.type";
 
 export const validateConstants = () => {
   let checkData = {
     NAME,
     ETH_ADDRESS,
+    CONTAINER_MAX_CNT,
+    CONTAINER_VCPU,
+    CONTAINER_MEMORY_GB,
+    CONTAINER_STORAGE_GB,
   } as any;
 
-  if (!IS_K8S) {
+  if (!NODE_PORT_IP) {
     checkData = {
       ...checkData,
-      CONTAINER_MAX_CNT,
-      CONTAINER_VCPU,
-      CONTAINER_MEMORY_GB,
-      CONTAINER_STORAGE_GB,
-      NODE_PORT_IP,
-    };
-  } else {
-    checkData = {
-      ...checkData,
-      GATEWAY_NAME,
-      ROOT_DOMAIN,
+      CONTAINER_ALLOW_PORT,
     };
   }
 
@@ -81,7 +78,9 @@ export const validateConstants = () => {
     throw new Error(`${String(missingEnv)} Not Exists`);
   }
 
-  if (!['MAINNET', 'TESTNET'].includes(NETWORK_TYPE)) {
-    throw new Error(`Invalid NETWORK_TYPE [${NETWORK_TYPE} ("MAINNET" or "TESTNET")]`);
+  if (!["MAINNET", "TESTNET"].includes(NETWORK_TYPE)) {
+    throw new Error(
+      `Invalid NETWORK_TYPE [${NETWORK_TYPE} ("MAINNET" or "TESTNET")]`
+    );
   }
 };

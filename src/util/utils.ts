@@ -1,9 +1,9 @@
-import * as util from 'util';
-import * as fs from 'fs';
-import childProcess from 'child_process';
-import * as si from 'systeminformation';
-import { generateMnemonic } from 'bip39';
-import * as types from '../common/types';
+import * as util from "util";
+import * as fs from "fs";
+import childProcess from "child_process";
+import * as si from "systeminformation";
+import { generateMnemonic } from "bip39";
+import * as types from "../common/types";
 
 export function createMnemonic() {
   return generateMnemonic();
@@ -24,14 +24,17 @@ export function replaceFileSync(filePath: string, value: any) {
 
 export async function getGpuInfo(): Promise<types.GPUInfo> {
   try {
-    const command = 'nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv,noheader';
+    const command =
+      "nvidia-smi --query-gpu=name,driver_version,memory.used,memory.total --format=csv,noheader";
     const { stdout } = await exec(command);
-    const infoList = stdout.split('\n');
+    const infoList = stdout.split("\n");
     infoList.pop();
     const result = {};
     let idx = 0;
     for (const info of infoList) {
-      const dataList = info.split(',').map((item: string) => item.replace(' ', ''));
+      const dataList = info
+        .split(",")
+        .map((item: string) => item.replace(" ", ""));
       result[String(idx)] = {
         gpuName: dataList[0],
         driverVersion: dataList[1],

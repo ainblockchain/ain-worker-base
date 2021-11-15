@@ -1,13 +1,12 @@
-import * as ConnectSdk from '@ainblockchain/connect-sdk';
-import Logger from './common/logger';
-import Docker from './util/docker';
-import * as constants from './common/constants';
-import * as utils from './util/utils';
-import dockerJobHandler, * as JobDocker from './job/docker';
-import k8sWorkspaceJobHandler, * as jobK8sWorkspace from './job/workspace-for-k8s';
-import ErrorDetailCode from './common/errorCode';
+import * as ConnectSdk from "@ainblockchain/connect-sdk";
+import Logger from "./common/logger";
+import Docker from "./util/docker";
+import * as constants from "./common/constants";
+import * as utils from "./util/utils";
+import dockerJobHandler, * as JobDocker from "./job/docker";
+import ErrorDetailCode from "./common/errorCode";
 
-const log = Logger.createLogger('/worker');
+const log = Logger.createLogger("/worker");
 
 export default class WorkerBase {
   static instance: WorkerBase;
@@ -20,14 +19,16 @@ export default class WorkerBase {
 
   constructor(mnemonic: string) {
     this.connectSdk = new ConnectSdk.Worker(
-      constants.NETWORK_TYPE as ConnectSdk.types.NetworkType, mnemonic, constants.NAME,
+      constants.NETWORK_TYPE as ConnectSdk.types.NetworkType,
+      mnemonic,
+      constants.NAME
     );
   }
 
   /**
    * Get WorkerBase instance for Singleton Pattern.
    * @returns WorkerBase instance.
-  */
+   */
   static getInstance(mnemonic: string) {
     if (!WorkerBase.instance) {
       WorkerBase.instance = new WorkerBase(mnemonic);
@@ -40,18 +41,18 @@ export default class WorkerBase {
    * Validate And Init For Docker.
    */
   public async init() {
-    if (!constants.IS_K8S) {
-      const gpuInfo = await utils.getGpuInfo();
-      if (constants.GPU_DEVICE_NUMBER) {
-        const deviceIdList = constants.GPU_DEVICE_NUMBER.split(',');
-        for (const deviceId of deviceIdList) {
-          if (!gpuInfo[deviceId]) {
-            throw new Error(ErrorDetailCode.INVALID_GPU_DEVICE);
-          }
+    const gpuInfo = await utils.getGpuInfo();
+    if (constants.GPU_DEVICE_NUMBER) {
+      const deviceIdList = constants.GPU_DEVICE_NUMBER.split(",");
+      for (const deviceId of deviceIdList) {
+        if (!gpuInfo[deviceId]) {
+          throw new Error(ErrorDetailCode.INVALID_GPU_DEVICE);
         }
       }
-      await Docker.getInstance().init(`${constants.LABEL_FOR_AIN_CONNECT}=container`);
     }
+    await Docker.getInstance().init(
+      `${constants.LABEL_FOR_AIN_CONNECT}=container`
+    );
   }
 
   public async start() {
@@ -65,14 +66,13 @@ export default class WorkerBase {
     this.connectSdk.listenRequestQueue(
       async (ref: string, value: ConnectSdk.types.ListenRequestQueueValue) => {
         await this.requestHandler(ref, value);
-      },
+      }
     );
 
     log.info(`[+] Start Worker ( 
       NETWORK_TYPE: ${constants.NETWORK_TYPE}
       Worker Name: ${constants.NAME}
       Worker Address: ${this.connectSdk.getConnect().getAddress()}
-      IS_K8S: ${(constants.IS_K8S) ? 'Yes' : 'No'}
     )`);
   }
 
@@ -82,18 +82,23 @@ export default class WorkerBase {
   private async register() {
     const cpuInfo = await utils.getCpuInfo();
     const gpuInfo = await utils.getGpuInfo();
+    /**
+     * @TODO hasEndpoint 추가.
+     */
     await this.connectSdk.register({
       ethAddress: constants.ETH_ADDRESS,
-      containerSpec: (!constants.IS_K8S) ? {
+      containerSpec: {
         cpu: {
           name: `${cpuInfo.manufacturer} ${cpuInfo.brand}`,
           vcpu: Number(constants.CONTAINER_VCPU),
         },
-        gpu: (constants.CONTAINER_GPU_CNT) ? {
-          name: Object.values(gpuInfo)[0].gpuName,
-          memoryGB: Object.values(gpuInfo)[0].memoryTotal / 1000,
-          count: Number(constants.CONTAINER_GPU_CNT),
-        } : null,
+        gpu: constants.CONTAINER_GPU_CNT
+          ? {
+              name: Object.values(gpuInfo)[0].gpuName,
+              memoryGB: Object.values(gpuInfo)[0].memoryTotal / 1000,
+              count: Number(constants.CONTAINER_GPU_CNT),
+            }
+          : null,
         memory: {
           maxGB: Number(constants.CONTAINER_MEMORY_GB),
         },
@@ -101,59 +106,58 @@ export default class WorkerBase {
           maxGB: Number(constants.CONTAINER_STORAGE_GB),
         },
         maxNumberOfContainer: Number(constants.CONTAINER_MAX_CNT),
-      } : null,
+      },
       labels: {
-        managedBy: constants.MANAGED_BY || 'none',
-        isK8s: constants.IS_K8S || null,
+        managedBy: constants.MANAGED_BY || "none",
+        serviceType: constants.SERVICE_TYPE || null,
       },
     });
   }
 
   private async updateStatus() {
-    if (constants.IS_K8S) {
-      const containerInfo = await jobK8sWorkspace.getAllContainerInfo();
-      await this.connectSdk.updateStatus({
-        containerInfo,
-        currentNumberOfContainer: Object.keys(containerInfo).length,
-      });
-    } else {
-      const containerInfo = await JobDocker.getAllContainerInfo();
-      await this.connectSdk.updateStatus({
-        containerInfo,
-        currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
-      });
-    }
+    const containerInfo = await JobDocker.getAllContainerInfo();
+    await this.connectSdk.updateStatus({
+      containerInfo,
+      currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
+    });
   }
 
-  private async requestHandler(ref: string, value: ConnectSdk.types.ListenRequestQueueValue) {
-    log.debug(`[+] Request ref: ${ref}, value: ${JSON.stringify(value, null, 4)}`);
+  private async requestHandler(
+    ref: string,
+    value: ConnectSdk.types.ListenRequestQueueValue
+  ) {
+    log.debug(
+      `[+] Request ref: ${ref}, value: ${JSON.stringify(value, null, 4)}`
+    );
 
-    const [service, method] = value.requestType.split(':');
-    const requestId = ref.split('/').reverse()[0];
+    const [type, method] = value.requestType.split(":");
+    const requestId = ref.split("/").reverse()[0];
     try {
-      let result: any;
-      if (constants.IS_K8S) {
-        if (service === 'k8s') {
-          result = await k8sWorkspaceJobHandler(method, value.params, value.userAinAddress);
-        } else {
-          throw new Error(ErrorDetailCode.FUNCTION_NOT_EXIST);
-        }
-      } else if (service === 'docker') {
-        result = await dockerJobHandler(method, value.params, value.userAinAddress);
-      } else {
+      if (["job", "deployment"].includes(type)) {
         throw new Error(ErrorDetailCode.FUNCTION_NOT_EXIST);
       }
+      const result = await dockerJobHandler(
+        type,
+        method,
+        value.params,
+        value.userAinAddress
+      );
+      /**
+       * @TODO 응답 메시지 수정.
+       */
       await this.connectSdk.sendResponse(requestId, value.userAinAddress, {
         data: result || {},
       });
       log.debug(`[-] Success! ref: ${ref}`);
     } catch (err) {
       log.error(`[-] Failed! ref: ${ref} - ${err}`);
-      await this.connectSdk.sendResponse(requestId, value.userAinAddress, {
-        errorMessage: err.message,
-      }).catch((error) => {
-        log.error(`[-] Failed to send Response - ${error}`);
-      });
+      await this.connectSdk
+        .sendResponse(requestId, value.userAinAddress, {
+          errorMessage: err.message,
+        })
+        .catch((error) => {
+          log.error(`[-] Failed to send Response - ${error}`);
+        });
     }
   }
 }

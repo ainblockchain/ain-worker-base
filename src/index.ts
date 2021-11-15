@@ -1,12 +1,12 @@
-import program from 'commander';
-import * as constants from './common/constants';
-import Logger from './common/logger';
-import Worker from './worker';
-import { replaceFileSync, createMnemonic } from './util/utils';
+import program from "commander";
+import * as constants from "./common/constants";
+import Logger from "./common/logger";
+import Worker from "./worker";
+import { replaceFileSync, createMnemonic } from "./util/utils";
 
-const log = Logger.createLogger('/index');
+const log = Logger.createLogger("/index");
 
-program.command('serve').action(async () => {
+program.command("serve").action(async () => {
   try {
     constants.validateConstants();
     let mnemonic = constants.MNEMONIC;

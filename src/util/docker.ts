@@ -1,16 +1,19 @@
-import Dockerode from 'dockerode';
-import * as constants from '../common/constants';
-import * as types from '../common/types';
-import ErrorDetailCode from '../common/errorCode';
+import Dockerode from "dockerode";
+import * as constants from "../common/constants";
+import * as types from "../common/types";
+import ErrorDetailCode from "../common/errorCode";
 
 export default class Docker {
   private static instance: Docker;
 
-  private static readonly MAX_CONTAINER_MAX_CNT = Number(constants.CONTAINER_MAX_CNT);
+  private static readonly MAX_CONTAINER_MAX_CNT = Number(
+    constants.CONTAINER_MAX_CNT
+  );
 
-  private static readonly MAX_IMAGE_CNT = Number(constants.CONTAINER_MAX_CNT) + 2;
+  private static readonly MAX_IMAGE_CNT =
+    Number(constants.CONTAINER_MAX_CNT) + 2;
 
-  private static readonly SOCKET_PATH = '/var/run/docker.sock';
+  private static readonly SOCKET_PATH = "/var/run/docker.sock";
 
   private dockerode: Dockerode;
 
@@ -39,51 +42,53 @@ export default class Docker {
 
   async init(containerLabel: string) {
     // Init allowPort
-    const portRangeList = constants.CONTAINER_ALLOW_PORT.split(',');
+    const portRangeList = constants.CONTAINER_ALLOW_PORT.split(",");
     for (const portRange of portRangeList) {
-      const [first, second] = portRange.split('-');
+      const [first, second] = portRange.split("-");
       const endPort = second || first;
       for (let port = Number(first); port <= Number(endPort); port += 1) {
         this.allowPorts[port] = true;
       }
     }
     // Init allowGPUDevice
-    const deviceIdList = (constants.GPU_DEVICE_NUMBER) ? constants.GPU_DEVICE_NUMBER.split(',') : [];
+    const deviceIdList = constants.GPU_DEVICE_NUMBER
+      ? constants.GPU_DEVICE_NUMBER.split(",")
+      : [];
     for (const deviceId of deviceIdList) {
       this.allowGPUDevice[deviceId] = true;
     }
 
     if (constants.GPU_DEVICE_NUMBER) {
-      await this.checkGPUDocker()
-        .catch((err) => {
-          throw new Error(ErrorDetailCode.GPU_NOT_SUPPORTED);
-        });
+      await this.checkGPUDocker().catch((err) => {
+        throw new Error(ErrorDetailCode.GPU_NOT_SUPPORTED);
+      });
     }
 
     // Init containerInfo
-    const connectContainers = await this.getContainerInfosByLabel(containerLabel);
+    const connectContainers = await this.getContainerInfosByLabel(
+      containerLabel
+    );
     for (const connectContainer of connectContainers) {
-      const {
-        Names: names, Image: imagePath, Ports: ports,
-      } = connectContainer;
-      const name = names[0].replace('/', '');
+      const { Names: names, Image: imagePath, Ports: ports } = connectContainer;
+      const name = names[0].replace("/", "");
       const { HostConfig } = await this.getContainerInfo(name);
       this.containerInfo[name] = {
         started: true,
         imagePath,
         externalPorts: ports.map((item) => String(item.PublicPort)),
-        GPUDeviceId: (
-          HostConfig.DeviceRequests && HostConfig.DeviceRequests[0])
-          ? HostConfig.DeviceRequests[0].DeviceIDs || [] : [],
+        GPUDeviceId:
+          HostConfig.DeviceRequests && HostConfig.DeviceRequests[0]
+            ? HostConfig.DeviceRequests[0].DeviceIDs || []
+            : [],
       };
     }
   }
 
   async checkGPUDocker() {
     await this.run({
-      imagePath: 'ubuntu:18.04',
-      containerId: 'connectGpuChecker',
-      command: ['tail', '-f'],
+      imagePath: "ubuntu:18.04",
+      containerId: "connectGpuChecker",
+      command: ["tail", "-f"],
       ports: [],
       resourceLimit: {
         vcpu: 1,
@@ -91,7 +96,7 @@ export default class Docker {
         gpuCnt: 1,
       },
     });
-    await this.kill('connectGpuChecker');
+    await this.kill("connectGpuChecker");
   }
 
   /**
@@ -99,7 +104,13 @@ export default class Docker {
    */
   async run(params: types.DockerRunParams) {
     const {
-      imagePath, containerId, ports, envs, command, resourceLimit, labels,
+      imagePath,
+      containerId,
+      ports,
+      envs,
+      command,
+      resourceLimit,
+      labels,
     } = params;
 
     const exists = await this.existContainer(params.containerId);
@@ -116,11 +127,13 @@ export default class Docker {
     }
 
     // Check Extenal Port.
-    const allowPorts = Object.entries(this.allowPorts).filter(([_, allow]) => allow);
+    const allowPorts = Object.entries(this.allowPorts).filter(
+      ([_, allow]) => allow
+    );
     if (allowPorts.length < ports.length || ports.length > 3) {
       throw new Error(ErrorDetailCode.EXCEED_CONTAINER_PORT);
     }
-    const publishPorts: {[extenalPort: string]: string} = {};
+    const publishPorts: { [extenalPort: string]: string } = {};
     ports.forEach((port, idx) => {
       const extenalPort = allowPorts[idx][0];
       publishPorts[extenalPort] = String(port);
@@ -128,7 +141,9 @@ export default class Docker {
     });
 
     // Check GPU Device
-    const allowDeviceGPU = Object.entries(this.allowGPUDevice).filter(([_, allow]) => allow);
+    const allowDeviceGPU = Object.entries(this.allowGPUDevice).filter(
+      ([_, allow]) => allow
+    );
     const gpuDeviceNumbers: string[] = [];
     for (let gpuIdx = 0; gpuIdx < resourceLimit.gpuCnt; gpuIdx += 1) {
       const gpuDeviceNum = allowDeviceGPU[gpuIdx][0];
@@ -136,7 +151,7 @@ export default class Docker {
       gpuDeviceNumbers.push(gpuDeviceNum);
     }
 
-    const cpuFirstCore = `${(this.getContainerCnt() * resourceLimit.vcpu)}`;
+    const cpuFirstCore = `${this.getContainerCnt() * resourceLimit.vcpu}`;
     this.containerInfo[containerId] = {
       imagePath,
       externalPorts: Object.keys(publishPorts),
@@ -152,26 +167,33 @@ export default class Docker {
       Image: imagePath,
       Labels: labels,
       HostConfig: {
-        CpusetCpus: `${cpuFirstCore}-${Number(cpuFirstCore) + resourceLimit.vcpu - 1}`,
+        CpusetCpus: `${cpuFirstCore}-${
+          Number(cpuFirstCore) + resourceLimit.vcpu - 1
+        }`,
         KernelMemoryTCP: resourceLimit.memoryGB * 1000 * 1000,
         PortBindings: {},
         Binds: [],
         ShmSize: 4294967296, // 4GB
-        DeviceRequests: (gpuDeviceNumbers.length !== 0) ? [
-          {
-            Driver: '',
-            Count: 0,
-            DeviceIDs: gpuDeviceNumbers,
-            Capabilities: [['gpu']],
-            Options: {},
-          },
-        ] : [],
+        DeviceRequests:
+          gpuDeviceNumbers.length !== 0
+            ? [
+                {
+                  Driver: "",
+                  Count: 0,
+                  DeviceIDs: gpuDeviceNumbers,
+                  Capabilities: [["gpu"]],
+                  Options: {},
+                },
+              ]
+            : [],
       },
     };
 
     for (const [externalPort, internalPort] of Object.entries(publishPorts)) {
       createOption.ExposedPorts[`${internalPort}/tcp`] = {};
-      createOption.HostConfig.PortBindings[`${internalPort}/tcp`] = [{ HostPort: externalPort }];
+      createOption.HostConfig.PortBindings[`${internalPort}/tcp`] = [
+        { HostPort: externalPort },
+      ];
     }
 
     try {
@@ -200,7 +222,7 @@ export default class Docker {
   /**
    * Kill Docker Container.
    */
-  async kill(containerId: string, allowLabels?: {[key: string]: string}) {
+  async kill(containerId: string, allowLabels?: { [key: string]: string }) {
     if (!this.containerInfo[containerId]) {
       throw new Error(ErrorDetailCode.CONTAINER_NOT_EXIST);
     }
@@ -211,7 +233,10 @@ export default class Docker {
     const containerInfo = await containerHandler.inspect();
     if (allowLabels) {
       Object.entries(allowLabels).forEach(([key, value]) => {
-        if (!containerInfo.Config.Labels[key] || containerInfo.Config.Labels[key] !== value) {
+        if (
+          !containerInfo.Config.Labels[key] ||
+          containerInfo.Config.Labels[key] !== value
+        ) {
           throw new Error(ErrorDetailCode.CAN_NOT_ALLOW);
         }
       });
@@ -237,7 +262,7 @@ export default class Docker {
   async exec(containerId: string, command: string) {
     const containerHandler = this.dockerode.getContainer(containerId);
     const exec = await containerHandler.exec({
-      Cmd: ['/bin/bash', '-c', command],
+      Cmd: ["/bin/bash", "-c", command],
       AttachStderr: true,
       AttachStdout: true,
     });
@@ -256,7 +281,7 @@ export default class Docker {
       ...result,
       ...this.containerInfo[containerId],
     };
-  }
+  };
 
   /**
    * Get Container Information By Container Label.
@@ -269,18 +294,21 @@ export default class Docker {
       },
     });
     return result;
-  }
+  };
 
   /**
    * Pull Docker Image.
    */
   private async pullImage(imagePath: string) {
     // Clear Not Used Docker Image.
-    if (!this.dockerImagePathList.includes(imagePath)
-      && this.dockerImagePathList.length === Docker.MAX_IMAGE_CNT) {
+    if (
+      !this.dockerImagePathList.includes(imagePath) &&
+      this.dockerImagePathList.length === Docker.MAX_IMAGE_CNT
+    ) {
       for (const dockerImagePath of this.dockerImagePathList) {
-        const containerValue = Object.values(this.containerInfo)
-          .filter((item) => item.imagePath === dockerImagePath);
+        const containerValue = Object.values(this.containerInfo).filter(
+          (item) => item.imagePath === dockerImagePath
+        );
         // Not Used Image.
         if (containerValue.length === 0) {
           await this.removeImage(dockerImagePath);
@@ -291,36 +319,47 @@ export default class Docker {
     if (!this.dockerImagePathList.includes(imagePath)) {
       this.dockerImagePathList.push(imagePath);
     }
-    if (imagePath.split(':').length === 1) {
-      imagePath += ':latest';
+    if (imagePath.split(":").length === 1) {
+      imagePath += ":latest";
     }
     let authconfig: any;
-    if (constants.REGISTRY_USERNAME && constants.REGISTRY_PASSWORD && constants.REGISTRY_SERVER) {
+    if (
+      constants.REGISTRY_USERNAME &&
+      constants.REGISTRY_PASSWORD &&
+      constants.REGISTRY_SERVER
+    ) {
       authconfig = {
         username: constants.REGISTRY_USERNAME,
         password: constants.REGISTRY_PASSWORD,
         serveraddress: constants.REGISTRY_SERVER,
       };
     }
-    const pullMethod = () => new Promise<number>((resolve, _) => {
-      this.dockerode.pull(imagePath, { authconfig }, async (err: any, stream: any) => {
-        function onFinished() {
-          if (err) {
-            resolve(103);
-          } else {
-            resolve(0);
+    const pullMethod = () =>
+      new Promise<number>((resolve, _) => {
+        this.dockerode.pull(
+          imagePath,
+          { authconfig },
+          async (err: any, stream: any) => {
+            function onFinished() {
+              if (err) {
+                resolve(103);
+              } else {
+                resolve(0);
+              }
+            }
+            if (err) {
+              resolve(103);
+            } else {
+              await this.dockerode.modem.followProgress(stream, onFinished);
+            }
           }
-        }
-        if (err) {
-          resolve(103);
-        } else {
-          await this.dockerode.modem.followProgress(stream, onFinished);
-        }
+        );
       });
-    });
     const result = await pullMethod();
     if (result === 0) {
-      this.dockerImagePathList = this.dockerImagePathList.filter((item) => item !== imagePath);
+      this.dockerImagePathList = this.dockerImagePathList.filter(
+        (item) => item !== imagePath
+      );
     }
     return result;
   }
@@ -329,7 +368,9 @@ export default class Docker {
    * Remove Docker Image.
    */
   async removeImage(imagePath: string) {
-    this.dockerImagePathList = this.dockerImagePathList.filter((item) => item !== imagePath);
+    this.dockerImagePathList = this.dockerImagePathList.filter(
+      (item) => item !== imagePath
+    );
     const imageController = this.dockerode.getImage(imagePath);
     await imageController.remove();
   }
