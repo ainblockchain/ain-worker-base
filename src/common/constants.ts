@@ -19,6 +19,7 @@ export const {
   ETH_ADDRESS,
   MANAGED_BY,
   SERVICE_TYPE,
+  SPEC_NAME,
   CONTAINER_MAX_CNT,
   CONTAINER_VCPU,
   CONTAINER_MEMORY_GB,
@@ -42,7 +43,7 @@ export const K8S_CONFIG_PATH =
 
 export const LABEL_FOR_OWNER = "AinConnect.ownerAddress";
 export const LABEL_FOR_AIN_CONNECT = "AinConnect.container";
-export const LABEL_FOR_JOB_TYPE = "AinConnect.type";
+export const LABEL_FOR_REQUEST_ID = "AinConnect.requestId";
 
 export const validateConstants = () => {
   let checkData = {
@@ -78,9 +79,9 @@ export const validateConstants = () => {
     throw new Error(`${String(missingEnv)} Not Exists`);
   }
 
-  if (!["MAINNET", "TESTNET"].includes(NETWORK_TYPE)) {
+  if (!["MAINNET", "TESTNET", "DEVNET"].includes(NETWORK_TYPE)) {
     throw new Error(
-      `Invalid NETWORK_TYPE [${NETWORK_TYPE} ("MAINNET" or "TESTNET")]`
+      `Invalid NETWORK_TYPE [${NETWORK_TYPE} ("MAINNET" or "TESTNET" or "DEVNET")]`
     );
   }
 };

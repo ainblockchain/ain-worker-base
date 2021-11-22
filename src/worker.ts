@@ -4,7 +4,7 @@ import Docker from "./util/docker";
 import * as constants from "./common/constants";
 import * as utils from "./util/utils";
 import dockerJobHandler, * as JobDocker from "./job/docker";
-import ErrorDetailCode from "./common/errorCode";
+import { ErrorCode, CustomError } from "./common/error";
 
 const log = Logger.createLogger("/worker");
 
@@ -19,7 +19,7 @@ export default class WorkerBase {
 
   constructor(mnemonic: string) {
     this.connectSdk = new ConnectSdk.Worker(
-      constants.NETWORK_TYPE as ConnectSdk.types.NetworkType,
+      constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
       mnemonic,
       constants.NAME
     );
@@ -46,7 +46,7 @@ export default class WorkerBase {
       const deviceIdList = constants.GPU_DEVICE_NUMBER.split(",");
       for (const deviceId of deviceIdList) {
         if (!gpuInfo[deviceId]) {
-          throw new Error(ErrorDetailCode.INVALID_GPU_DEVICE);
+          throw new CustomError(ErrorCode.NOT_SUPPORTED, "GPU Not Supported");
         }
       }
     }
@@ -64,7 +64,7 @@ export default class WorkerBase {
     }, WorkerBase.updateStatusTimeMs);
 
     this.connectSdk.listenRequestQueue(
-      async (ref: string, value: ConnectSdk.types.ListenRequestQueueValue) => {
+      async (ref: string, value: ConnectSdk.Types.ListenRequestQueueValue) => {
         await this.requestHandler(ref, value);
       }
     );
@@ -82,9 +82,7 @@ export default class WorkerBase {
   private async register() {
     const cpuInfo = await utils.getCpuInfo();
     const gpuInfo = await utils.getGpuInfo();
-    /**
-     * @TODO hasEndpoint 추가.
-     */
+
     await this.connectSdk.register({
       ethAddress: constants.ETH_ADDRESS,
       containerSpec: {
@@ -106,57 +104,104 @@ export default class WorkerBase {
           maxGB: Number(constants.CONTAINER_STORAGE_GB),
         },
         maxNumberOfContainer: Number(constants.CONTAINER_MAX_CNT),
+        hasEndpoint: !!constants.CONTAINER_ALLOW_PORT,
       },
       labels: {
         managedBy: constants.MANAGED_BY || "none",
         serviceType: constants.SERVICE_TYPE || null,
+        spec: constants.SPEC_NAME || null,
       },
     });
   }
 
   private async updateStatus() {
     const containerInfo = await JobDocker.getAllContainerInfo();
+    const runningContainerInfo: {
+      [containerId: string]: {
+        status: string;
+        serviceStatus?: string;
+        imagePath: string;
+      };
+    } = {};
+
+    for (const containerId in containerInfo) {
+      if (Object.prototype.hasOwnProperty.call(containerInfo, containerId)) {
+        const { status, requestId, userAinAddress, serviceStatus, imagePath } =
+          containerInfo[containerId];
+        if (status === "exited") {
+          const result = await dockerJobHandler(
+            "deleteContainer",
+            {
+              containerId,
+            },
+            userAinAddress,
+            requestId
+          );
+          await this.connectSdk.sendResponse(requestId, userAinAddress, {
+            data: result,
+          });
+        } else {
+          runningContainerInfo[containerId] = {
+            status,
+            imagePath,
+          };
+          if (serviceStatus) {
+            runningContainerInfo[containerId] = {
+              ...runningContainerInfo[containerId],
+              serviceStatus,
+            };
+          }
+        }
+      }
+    }
+
     await this.connectSdk.updateStatus({
-      containerInfo,
+      containerInfo: runningContainerInfo,
       currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
     });
   }
 
   private async requestHandler(
     ref: string,
-    value: ConnectSdk.types.ListenRequestQueueValue
+    value: ConnectSdk.Types.ListenRequestQueueValue
   ) {
     log.debug(
       `[+] Request ref: ${ref}, value: ${JSON.stringify(value, null, 4)}`
     );
 
-    const [type, method] = value.requestType.split(":");
     const requestId = ref.split("/").reverse()[0];
     try {
-      if (["job", "deployment"].includes(type)) {
-        throw new Error(ErrorDetailCode.FUNCTION_NOT_EXIST);
-      }
       const result = await dockerJobHandler(
-        type,
-        method,
+        value.requestType,
         value.params,
-        value.userAinAddress
+        value.userAinAddress,
+        requestId
       );
-      /**
-       * @TODO 응답 메시지 수정.
-       */
       await this.connectSdk.sendResponse(requestId, value.userAinAddress, {
-        data: result || {},
+        data: {
+          ...result,
+          statusCode: 200,
+        },
       });
       log.debug(`[-] Success! ref: ${ref}`);
-    } catch (err) {
-      log.error(`[-] Failed! ref: ${ref} - ${err}`);
+    } catch (error) {
+      log.error(`[-] Failed! ref: ${ref} - ${error}`);
+      let data = {};
+      if (Object.values(ErrorCode).includes(error.statusCode)) {
+        data = {
+          errorMessage: error.message,
+          statusCode: error.statusCode,
+        };
+      } else {
+        data = {
+          errorMessage: error.message,
+          statusCode: ErrorCode.UNEXPECTED,
+        };
+      }
       await this.connectSdk
-        .sendResponse(requestId, value.userAinAddress, {
-          errorMessage: err.message,
-        })
-        .catch((error) => {
-          log.error(`[-] Failed to send Response - ${error}`);
+        .sendResponse(requestId, value.userAinAddress, data)
+        .catch((err) => {
+          log.error(`[-] Failed to send Response - ${err}`);
         });
     }
   }

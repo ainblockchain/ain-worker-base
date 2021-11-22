@@ -1,7 +1,7 @@
 import Dockerode from "dockerode";
 import * as constants from "../common/constants";
 import * as types from "../common/types";
-import ErrorDetailCode from "../common/errorCode";
+import { ErrorCode, CustomError } from "../common/error";
 
 export default class Docker {
   private static instance: Docker;
@@ -60,7 +60,7 @@ export default class Docker {
 
     if (constants.GPU_DEVICE_NUMBER) {
       await this.checkGPUDocker().catch((err) => {
-        throw new Error(ErrorDetailCode.GPU_NOT_SUPPORTED);
+        throw new CustomError(ErrorCode.NOT_SUPPORTED, "GPU Not Supported");
       });
     }
 
@@ -115,15 +115,18 @@ export default class Docker {
 
     const exists = await this.existContainer(params.containerId);
     if (exists) {
-      throw new Error(ErrorDetailCode.CONTAINER_ALREADY_EXISTS);
+      throw new CustomError(ErrorCode.ALREADY_EXIST, "Container Already Exist");
     }
 
     // Check Container Limit.
     if (this.getContainerCnt() === Docker.MAX_CONTAINER_MAX_CNT) {
-      throw new Error(ErrorDetailCode.EXCEED_CONTAINER_LIMIT);
+      throw new CustomError(ErrorCode.QUOTA_EXCEED, "exceed Container Limit");
     }
     if (this.containerInfo[containerId]) {
-      throw new Error(ErrorDetailCode.CONTAINER_ALREADY_EXISTS);
+      throw new CustomError(
+        ErrorCode.ALREADY_EXIST,
+        "Container Already Exists"
+      );
     }
 
     // Check Extenal Port.
@@ -131,7 +134,7 @@ export default class Docker {
       ([_, allow]) => allow
     );
     if (allowPorts.length < ports.length || ports.length > 3) {
-      throw new Error(ErrorDetailCode.EXCEED_CONTAINER_PORT);
+      throw new CustomError(ErrorCode.QUOTA_EXCEED, "exceed Container Port");
     }
     const publishPorts: { [extenalPort: string]: string } = {};
     ports.forEach((port, idx) => {
@@ -224,10 +227,10 @@ export default class Docker {
    */
   async kill(containerId: string, allowLabels?: { [key: string]: string }) {
     if (!this.containerInfo[containerId]) {
-      throw new Error(ErrorDetailCode.CONTAINER_NOT_EXIST);
+      throw new CustomError(ErrorCode.NOT_EXIST, "Container Not Exist");
     }
     if (!this.containerInfo[containerId].started) {
-      throw new Error(ErrorDetailCode.CONTAINER_NOT_STARTED);
+      throw new CustomError(ErrorCode.NOT_EXIST, "Container Not Started");
     }
     const containerHandler = this.dockerode.getContainer(containerId);
     const containerInfo = await containerHandler.inspect();
@@ -237,7 +240,7 @@ export default class Docker {
           !containerInfo.Config.Labels[key] ||
           containerInfo.Config.Labels[key] !== value
         ) {
-          throw new Error(ErrorDetailCode.CAN_NOT_ALLOW);
+          throw new CustomError(ErrorCode.UNAUTHORIZED, "UNAUTHORIZED");
         }
       });
     }
@@ -287,13 +290,23 @@ export default class Docker {
    * Get Container Information By Container Label.
    */
   getContainerInfosByLabel = async (label: string) => {
-    const result = await this.dockerode.listContainers({
+    const results = await this.dockerode.listContainers({
       all: true,
       filters: {
         label: [label],
       },
     });
-    return result;
+    const containerInfo: Array<
+      Dockerode.ContainerInfo & { serviceStatus?: string }
+    > = [];
+    for (const info of results) {
+      const detailInfo = await this.getContainerInfo(info.Id);
+      containerInfo.push({
+        ...info,
+        serviceStatus: detailInfo.State.Health?.Status,
+      });
+    }
+    return containerInfo;
   };
 
   /**

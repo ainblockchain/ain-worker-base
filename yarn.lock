@@ -46,10 +46,10 @@
     uuid "^3.3.3"
     varuint-bitcoin "^1.1.0"
 
-"@ainblockchain/connect-sdk@0.4.4":
-  version "0.4.4"
-  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.4.4.tgz#6748bf3778265ac500f9d6ab110b8c822a7a1102"
-  integrity sha512-V83zpu6ztZX6PcWhi7LDdZeeNJTaNrGn9+7la9GJZ4f92ZALeiVcQ5xxEmx1WIFFMLAvvInzbACQfd1grfbzAg==
+"@ainblockchain/connect-sdk@0.6.4":
+  version "0.6.4"
+  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.6.4.tgz#1cbfa4ea30ceb215680ccce29536d652753fbca4"
+  integrity sha512-c07BjbEDMIb6fIrOz0kzCRfURCMoLNPSIrVPbN+CGvhkEnSwr2BWuAmHOQUEMwdayHtSHoru+wClKdyFfCV7Xw==
   dependencies:
     "@ainblockchain/ain-js" "^1.0.2"
     "@ainblockchain/ain-util" "^1.1.5"
@@ -4098,7 +4098,7 @@ nan@^2.12.1, nan@^2.14.0, nan@^2.14.1, nan@^2.15.0:
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.15.0.tgz#3f34a473ff18e15c1b5626b62903b5ad6e665fee"
   integrity sha512-8ZtvEnA2c5aYCZYd1cvgdnU6cqwixRoYg70xPLWUws5ORTa/lnw+u4amixRS/Ac5U5mQVgp9pnlSUnbNWFaWZQ==
 
-nanoid@^3.1.12:
+nanoid@^3.1.12, nanoid@^3.1.30:
   version "3.1.30"
   resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.1.30.tgz#63f93cc548d2a113dc5dfbc63bfa09e2b9b64362"
   integrity sha512-zJpuPDwOv8D2zq2WRoMe1HsfZthVewpel9CAvTfc/2mBD1uUT/agc5f7GHGWXlYkFvi1mVxe4IjvP2HNrop7nQ==

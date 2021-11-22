@@ -15,6 +15,8 @@ export const fileExists = (filePath: string) => fs.existsSync(filePath);
 
 export function replaceFileSync(filePath: string, value: any) {
   if (!fileExists(filePath)) {
+    const filePathList = filePath.split("/");
+    fs.mkdirSync(filePathList.slice(0, filePathList.length - 1).join("/"));
     fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
     return;
   }

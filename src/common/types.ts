@@ -45,10 +45,19 @@ export type CreateContainer = {
   imagePath: string;
   envs?: { [key: string]: string };
   command?: string[];
-  ports: number[];
+  ports?: { [serviceName: string]: number };
   labels?: { [key: string]: string };
 };
 
 export type DeleteContainer = {
   containerId: string;
+};
+
+export type DetailContainerInfo = {
+  requestId: string;
+  userAinAddress: string;
+  imagePath: string;
+  exitCode?: number;
+  status: string;
+  serviceStatus?: string;
 };

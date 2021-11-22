@@ -25,12 +25,13 @@
 
 ## 환경변수
 
-- NETWORK_TYPE: "MAINNET" or "TESTNET"
+- NETWORK_TYPE: "MAINNET" or "TESTNET" or "DEVNET"
 - NAME: Worker 고유 이름
 - ETH_ADDRESS: 보상을 받은 이더리움 주소.
 - MNEMONIC: 지갑을 복구하기 위한 12개의 단어로 단어 사이를 띄어쓰기로 구분한다. (ex 'apple bike ...)
 - MANAGED_BY: (optional) Manage ID.
 - SERVICE_TYPE: (optional) 서비스 유형(ex. teachable-nlp)
+- SPEC_NAME: (optional) HW SPEC NAME(ex. d4v4)
 - NODE_PORT_IP: (optional) 컨테이너 접근을 위한 IP 로, Docker 버전인 경우 Worker 가 셋업된 머신에 IP 이다.
 - CONTAINER_MAX_CNT: 컨테이너 최대 개수로, Docker 버전 Worker 인 경우 필수 옵션.
 - CONTAINER_VCPU: 한 컨테이너 Core 개수, Docker 버전 Worker 인 경우 필수 옵션.
@@ -106,7 +107,7 @@ CONTAINER_VCPU={CONTAINER_VCPU} \
 CONTAINER_MEMORY_GB={CONTAINER_MEMORY_GB} \
 CONTAINER_STORAGE_GB={CONTAINER_STORAGE_GB} \
 [NODE_PORT_IP={NODE_PORT_IP}] \
-[CONTAINER_ALLOW_PORT={CONTAINER_ALLOW_PORT} \]
+[CONTAINER_ALLOW_PORT={CONTAINER_ALLOW_PORT}] \
 [CONTAINER_GPU_CNT={CONTAINER_GPU_CNT}] \
 [GPU_DEVICE_NUMBER={GPU_DEVICE_NUMBER}] \
 [MNEMONIC={MNEMONIC}] \

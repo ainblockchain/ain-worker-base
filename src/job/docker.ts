@@ -1,30 +1,30 @@
-import ErrorDetailCode from "../common/errorCode";
+import { customAlphabet } from "nanoid";
+import { ErrorCode, CustomError } from "../common/error";
 import * as types from "../common/types";
 import * as constants from "../common/constants";
 import Docker from "../util/docker";
 
+function getRandomRequestId() {
+  const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 25);
+  return `r${nanoid()}`;
+}
+
 export async function getAllContainerInfo() {
-  /**
-   * @TODO State.Health.Status 정보도 추가하기.
-   */
   const containerList = await Docker.getInstance().getContainerInfosByLabel(
     `${constants.LABEL_FOR_AIN_CONNECT}=container`
   );
-  const containerInfos = {};
+  const containerInfos: { [containerId: string]: types.DetailContainerInfo } =
+    {};
   for (const container of containerList) {
     const containerId = container.Names[0].replace("/", "");
-    const ports = container.Ports.map((Port) => Port.PublicPort);
     containerInfos[containerId] = {
       status: container.State,
+      serviceStatus: container.serviceStatus,
       imagePath: container.Image,
-      ports,
+      requestId: container.Labels[constants.LABEL_FOR_REQUEST_ID],
+      userAinAddress: container.Labels[constants.LABEL_FOR_OWNER],
     };
     if (container.State === "exited") {
-      /**
-       * @TODO job 인지 deployment 인지 구분하고,
-       * job 인 경우는 그냥 response 를 업데이트?
-       * deployment 인 경우는 exit + exit Time 을 저장하고, exit 이 이미 있으면 한시간된 경우에 클리어 로직 추가?
-       */
       const containerDetail = await Docker.getInstance().getContainerInfo(
         containerId
       );
@@ -40,15 +40,27 @@ export async function getAllContainerInfo() {
 async function createContainer(
   params: types.CreateContainer,
   userAinAddress: string,
-  type: string
+  requestId: string
 ) {
-  /**
-   * @TODO Port 를 number[] 에서 {[serviceName: string]: number} 로 수정하고,
-   * containerInfo 에 해당 정보를 extenal port 로 변경해서 처리하기
-   * endpoint 가 필요한 경우만 port 열기.
-   */
+  const containerId = getRandomRequestId();
+  const { ports, envs, command, imagePath } = params;
+
+  const portToService = {};
+  const paramsPorts: number[] = [];
+  for (const serviceName in ports) {
+    if (Object.prototype.hasOwnProperty.call(ports, serviceName)) {
+      const portNumber = ports[serviceName];
+      portToService[portNumber] = serviceName;
+      paramsPorts.push(portNumber);
+    }
+  }
+
   const result = await Docker.getInstance().run({
-    ...params,
+    ports: paramsPorts,
+    containerId,
+    command,
+    envs,
+    imagePath,
     resourceLimit: {
       vcpu: Number(constants.CONTAINER_VCPU),
       memoryGB: Number(constants.CONTAINER_MEMORY_GB),
@@ -58,17 +70,19 @@ async function createContainer(
       ...params.labels,
       [constants.LABEL_FOR_OWNER]: userAinAddress,
       [constants.LABEL_FOR_AIN_CONNECT]: "container",
-      [constants.LABEL_FOR_JOB_TYPE]: type,
+      [constants.LABEL_FOR_REQUEST_ID]: requestId,
     },
   });
 
   const endpoint = {};
   Object.entries(result.publishPorts).forEach(([extenalPort, internalPort]) => {
-    endpoint[internalPort] = `${constants.NODE_PORT_IP}:${extenalPort}`;
+    endpoint[
+      portToService[internalPort]
+    ] = `${constants.NODE_PORT_IP}:${extenalPort}`;
   });
 
   return {
-    containerId: params.containerId,
+    containerId,
     endpoint,
   };
 }
@@ -83,21 +97,22 @@ async function deleteContainer(
 
   return {
     containerId: params.containerId,
-    result: true,
+    status: "terminated",
+    termindatedAt: Date.now(),
   };
 }
 
 export default async function handler(
-  type: string,
-  method: string,
+  requestType: string,
   params: any,
-  userAinAddress: string
+  userAinAddress: string,
+  requestId: string
 ) {
-  if (method === "createContainer") {
-    return createContainer(params, userAinAddress, type);
+  if (requestType === "createContainer") {
+    return createContainer(params, userAinAddress, requestId);
   }
-  if (method === "deleteContainer") {
+  if (requestType === "deleteContainer") {
     return deleteContainer(params, userAinAddress);
   }
-  throw new Error(ErrorDetailCode.FUNCTION_NOT_EXIST);
+  throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
 }
