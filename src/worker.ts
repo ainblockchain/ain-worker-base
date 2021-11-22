@@ -3,7 +3,7 @@ import Logger from "./common/logger";
 import Docker from "./util/docker";
 import * as constants from "./common/constants";
 import * as utils from "./util/utils";
-import dockerJobHandler, * as JobDocker from "./job/docker";
+import * as JobDocker from "./job/docker";
 import { ErrorCode, CustomError } from "./common/error";
 
 const log = Logger.createLogger("/worker");
@@ -126,20 +126,22 @@ export default class WorkerBase {
 
     for (const containerId in containerInfo) {
       if (Object.prototype.hasOwnProperty.call(containerInfo, containerId)) {
-        const { status, requestId, userAinAddress, serviceStatus, imagePath } =
+        const { status, userAinAddress, serviceStatus, imagePath } =
           containerInfo[containerId];
         if (status === "exited") {
-          const result = await dockerJobHandler(
-            "deleteContainer",
+          const result = await JobDocker.deleteContainer(
             {
               containerId,
             },
-            userAinAddress,
-            requestId
+            userAinAddress
           );
-          await this.connectSdk.sendResponse(requestId, userAinAddress, {
-            data: result,
-          });
+          await this.connectSdk.sendResponse(
+            result.createRequestId,
+            userAinAddress,
+            {
+              data: result,
+            }
+          );
         } else {
           runningContainerInfo[containerId] = {
             status,
@@ -170,13 +172,27 @@ export default class WorkerBase {
     );
 
     const requestId = ref.split("/").reverse()[0];
+    let result;
     try {
-      const result = await dockerJobHandler(
-        value.requestType,
-        value.params,
-        value.userAinAddress,
-        requestId
-      );
+      const { requestType, params, userAinAddress } = value;
+      if (requestType === "createContainer") {
+        result = await JobDocker.createContainer(
+          params,
+          userAinAddress,
+          requestId
+        );
+      } else if (requestType === "deleteContainer") {
+        result = await JobDocker.deleteContainer(params, userAinAddress);
+        await this.connectSdk.sendResponse(
+          result.createRequestId,
+          value.userAinAddress,
+          {
+            data: result,
+          }
+        );
+      } else {
+        throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
+      }
       await this.connectSdk.sendResponse(requestId, value.userAinAddress, {
         data: {
           ...result,

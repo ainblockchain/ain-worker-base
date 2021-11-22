@@ -1,5 +1,4 @@
 import { customAlphabet } from "nanoid";
-import { ErrorCode, CustomError } from "../common/error";
 import * as types from "../common/types";
 import * as constants from "../common/constants";
 import Docker from "../util/docker";
@@ -91,7 +90,7 @@ async function deleteContainer(
   params: types.DeleteContainer,
   userAinAddress: string
 ) {
-  await Docker.getInstance().kill(params.containerId, {
+  const requestId = await Docker.getInstance().kill(params.containerId, {
     [constants.LABEL_FOR_OWNER]: userAinAddress,
   });
 
@@ -99,20 +98,7 @@ async function deleteContainer(
     containerId: params.containerId,
     status: "terminated",
     termindatedAt: Date.now(),
+    createRequestId: requestId,
   };
 }
-
-export default async function handler(
-  requestType: string,
-  params: any,
-  userAinAddress: string,
-  requestId: string
-) {
-  if (requestType === "createContainer") {
-    return createContainer(params, userAinAddress, requestId);
-  }
-  if (requestType === "deleteContainer") {
-    return deleteContainer(params, userAinAddress);
-  }
-  throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
-}
+export { createContainer, deleteContainer };

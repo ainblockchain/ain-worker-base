@@ -257,6 +257,8 @@ export default class Docker {
       });
     }
     delete this.containerInfo[containerId];
+
+    return containerInfo.Config.Labels[constants.LABEL_FOR_REQUEST_ID];
   }
 
   /**
