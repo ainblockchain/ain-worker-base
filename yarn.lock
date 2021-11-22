@@ -46,10 +46,10 @@
     uuid "^3.3.3"
     varuint-bitcoin "^1.1.0"
 
-"@ainblockchain/connect-sdk@0.6.4":
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.6.4.tgz#1cbfa4ea30ceb215680ccce29536d652753fbca4"
-  integrity sha512-c07BjbEDMIb6fIrOz0kzCRfURCMoLNPSIrVPbN+CGvhkEnSwr2BWuAmHOQUEMwdayHtSHoru+wClKdyFfCV7Xw==
+"@ainblockchain/connect-sdk@0.6.5":
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.6.5.tgz#a559383ee8806ab5e99852d2250ce2b2031200e0"
+  integrity sha512-3+PyPuZZ7L4fOFfX9Gq/hdzdVo2CPzAb+Za6fs/axZ3olje1uIslHojnky9g393F/8orMCzAfQk+xzggG0yMeA==
   dependencies:
     "@ainblockchain/ain-js" "^1.0.2"
     "@ainblockchain/ain-util" "^1.1.5"

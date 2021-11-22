@@ -161,6 +161,7 @@ export default class WorkerBase {
     }
 
     await this.connectSdk.updateStatus({
+      workerStatus: "running",
       containerInfo: runningContainerInfo,
       currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
     });
