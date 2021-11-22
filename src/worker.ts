@@ -126,7 +126,7 @@ export default class WorkerBase {
 
     for (const containerId in containerInfo) {
       if (Object.prototype.hasOwnProperty.call(containerInfo, containerId)) {
-        const { status, userAinAddress, serviceStatus, imagePath } =
+        const { status, userAinAddress, serviceStatus, imagePath, exitCode } =
           containerInfo[containerId];
         if (status === "exited") {
           const result = await JobDocker.deleteContainer(
@@ -139,7 +139,10 @@ export default class WorkerBase {
             result.createRequestId,
             userAinAddress,
             {
-              data: result,
+              data: {
+                ...result,
+                exitCode,
+              },
             }
           );
         } else {
@@ -193,12 +196,16 @@ export default class WorkerBase {
       } else {
         throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
       }
-      await this.connectSdk.sendResponse(requestId, value.userAinAddress, {
-        data: {
-          ...result,
-          statusCode: 200,
-        },
-      });
+      await this.connectSdk
+        .sendResponse(requestId, value.userAinAddress, {
+          data: {
+            ...result,
+            statusCode: 200,
+          },
+        })
+        .catch((err) => {
+          log.error(`[-] Failed to send Response ${err.message}`);
+        });
       log.debug(`[-] Success! ref: ${ref}`);
     } catch (error) {
       log.error(`[-] Failed! ref: ${ref} - ${error}`);

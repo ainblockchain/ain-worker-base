@@ -2,6 +2,7 @@ import { customAlphabet } from "nanoid";
 import * as types from "../common/types";
 import * as constants from "../common/constants";
 import Docker from "../util/docker";
+import { ErrorCode, CustomError } from "../common/error";
 
 function getRandomRequestId() {
   const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 25);
@@ -43,6 +44,9 @@ async function createContainer(
 ) {
   const containerId = getRandomRequestId();
   const { ports, envs, command, imagePath } = params;
+  if (!constants.NODE_PORT_IP && ports) {
+    throw new CustomError(ErrorCode.NOT_SUPPORTED, "ENDPOINT Not Supported");
+  }
 
   const portToService = {};
   const paramsPorts: number[] = [];
