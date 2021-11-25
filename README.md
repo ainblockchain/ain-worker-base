@@ -44,6 +44,7 @@
 - REGISTRY_PASSWORD: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
 - REGISTRY_SERVER: (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
 - SLACK_WEBHOOK_URL: (optional) Worker 의 Info 와 Error 로그를 Slack 으로 알림 받고 싶을 때 필요한 옵션.
+- ENABLE_STORAGE: (optional) true 인 경우 Storage 기능이 활성화 된다.
 
 ## How To
 
@@ -69,12 +70,12 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name wor
 [-e REGISTRY_PASSWORD={REGISTRY_PASSWORD}] \
 [-e REGISTRY_SERVER={REGISTRY_SERVER}] \
 [-e SLACK_WEBHOOK_URL={SLACK_WEBHOOK_URL}] \
+[-e ENABLE_STORAGE={ENABLE_STORAGE}] \
 [--gpus all] \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
 ainblockchain/ain-connect-base:revamp
 ```
-
 - [] 는 옵셔널 환경 변수이다.
 - MNEMONIC 환경 변수가 없으면 자동으로 $HOME/ain-worker/{NAME}/env.json 에 저장한다.
 - 도커 이미지는 Docker Hub 에 있는 ainblockchain/ain-connect-base 로 하거나 직접 빌드해서 실행한다.
@@ -115,6 +116,7 @@ CONTAINER_STORAGE_GB={CONTAINER_STORAGE_GB} \
 [REGISTRY_PASSWORD={REGISTRY_PASSWORD}] \
 [REGISTRY_SERVER={REGISTRY_SERVER}] \
 [SLACK_WEBHOOK_URL={SLACK_WEBHOOK_URL}] \
+[-e ENABLE_STORAGE={ENABLE_STORAGE}] \
 yarn start
 ```
 
