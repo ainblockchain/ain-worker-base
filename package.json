@@ -26,7 +26,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@ainblockchain/connect-sdk": "/Users/donghyeon/code/comcom/ain/ain-connect-sdk",
+    "@ainblockchain/connect-sdk": "0.6.7",
     "@types/bip39": "^3.0.0",
     "@types/dockerode": "^3.2.1",
     "@types/mustache": "^4.1.2",
