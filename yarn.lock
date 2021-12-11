@@ -46,25 +46,10 @@
     uuid "^3.3.3"
     varuint-bitcoin "^1.1.0"
 
-"@ainblockchain/connect-sdk@/Users/donghyeon/code/comcom/ain/ain-connect-sdk":
-  version "0.6.6"
-  dependencies:
-    "@ainblockchain/ain-js" "^1.0.2"
-    "@ainblockchain/ain-util" "^1.1.5"
-    "@aindev/connect-redis-sdk" "^0.1.6"
-    "@google-cloud/storage" "^5.16.0"
-    "@types/bip39" "^3.0.0"
-    "@types/hdkey" "^0.7.1"
-    bip39 "^3.0.2"
-    firebase "^7.19.0"
-    hdkey "^2.0.1"
-    nanoid "^3.1.12"
-    xhr2 "^0.2.1"
-
-"@ainblockchain/connect-sdk@0.6.6":
-  version "0.6.6"
-  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.6.6.tgz#b29a96a1eb6224bb4feddc45d56755d78f0727ce"
-  integrity sha512-dkjrnLHz/+igk8xqZyeMwuzE6oEpPsmU744/PLzMgGop75SyCzWI9W7JrumOEdjiJfSS16hyKadx/6Je+Gn3VQ==
+"@ainblockchain/connect-sdk@0.6.9":
+  version "0.6.9"
+  resolved "https://registry.yarnpkg.com/@ainblockchain/connect-sdk/-/connect-sdk-0.6.9.tgz#c96034837b7fa40457efbd6323ce1cf1af2796ad"
+  integrity sha512-jOp0MOk1HP4ACiSrj3y3K9RJyVH2L15hxYO5QkItQ/9HluhydFTrX/lbjXc2PTUKtI49lGWeqakPN48f5F3C/w==
   dependencies:
     "@ainblockchain/ain-js" "^1.0.2"
     "@ainblockchain/ain-util" "^1.1.5"
