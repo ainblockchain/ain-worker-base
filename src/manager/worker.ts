@@ -363,14 +363,8 @@ export default class WorkerBase {
   /**
    * Delete Deployment, Service and VirtualService.
   */
-  protected undeploy = async (address: string, params: ConnectSdk.types.UndeployParams) => {
+  protected undeploy = async (_: string, params: ConnectSdk.types.UndeployParams) => {
     log.debug(`[+] undeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
-    const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
-      [WorkerBase.k8sConstants.addressLabalName]: address,
-    });
-    if (!isAuth) {
-      throw { statusCode: error.unauthorized, errMessage: 'Unauthorized Address.' };
-    }
     try {
       await this.k8sApi.deleteResource('deployment', params.containerId, params.namespaceId);
       await this.k8sApi.deleteResource('service', params.containerId, params.namespaceId);
@@ -391,14 +385,8 @@ export default class WorkerBase {
   /**
    * Configrate Deployment. (Env, Replicas, ImagePath)
   */
-  protected redeploy = async (address: string, params: ConnectSdk.types.RedeployParams) => {
+  protected redeploy = async (_: string, params: ConnectSdk.types.RedeployParams) => {
     log.debug(`[+] redeploy [namespaceId: ${params.namespaceId} containerId: ${params.containerId}]`);
-    const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
-      [WorkerBase.k8sConstants.addressLabalName]: address,
-    });
-    if (!isAuth) {
-      throw { statusCode: error.unauthorized, errMessage: 'Unauthorized Address.' };
-    }
     const result = await this.k8sApi.editDeployment(params.containerId,
       params.namespaceId, params.option);
     if (result) {
@@ -446,15 +434,9 @@ export default class WorkerBase {
   /**
    * Delete Namespace (All resources with the namespaceId are removed).
   */
-  protected deleteNamespace = async (address: string,
+  protected deleteNamespace = async (_: string,
     params: ConnectSdk.types.DeleteNamespaceParams) => {
     log.debug(`[+] deleteNamespace [namespaceId: ${params.namespaceId}]`);
-    const isAuth = await this.k8sApi.isSelectLabel('namespace', params.namespaceId, undefined, {
-      [WorkerBase.k8sConstants.addressLabalName]: address,
-    });
-    if (!isAuth) {
-      throw { statusCode: error.unauthorized, errMessage: 'Unauthorized Address.' };
-    }
     try {
       await this.k8sApi.deleteResource('namespace', params.namespaceId);
       return {};
@@ -509,15 +491,10 @@ export default class WorkerBase {
   /**
     * Delete Storage.
   */
-  protected deleteStorage = async (address: string,
+  protected deleteStorage = async (_: string,
     params: ConnectSdk.types.DeleteStorageParams) => {
     log.debug(`[+] deleteStorage [namespaceId: ${params.namespaceId}] storageId: ${params.storageId}`);
-    const isAuth = await this.k8sApi.isSelectLabel('pvc', params.storageId, params.namespaceId, {
-      [WorkerBase.k8sConstants.addressLabalName]: address,
-    });
-    if (!isAuth) {
-      throw { statusCode: error.unauthorized, errMessage: 'Unauthorized Address.' };
-    }
+
     try {
       // Delete pv,pvc.
       await this.k8sApi.deleteResource('storage', params.storageId, params.namespaceId);
@@ -531,15 +508,9 @@ export default class WorkerBase {
   /**
     * Get Container Log.
   */
-  protected getContainerLog = async (address: string,
+  protected getContainerLog = async (_: string,
     params: ConnectSdk.types.GetContainerLogParams) => {
     log.debug(`[+] getContainerLog [namespaceId: ${params.namespaceId}] containerId: ${params.containerId}`);
-    const isAuth = await this.k8sApi.isSelectLabel('deployment', params.containerId, params.namespaceId, {
-      [WorkerBase.k8sConstants.addressLabalName]: address,
-    });
-    if (!isAuth) {
-      throw { statusCode: error.unauthorized, errMessage: 'Unauthorized Address.' };
-    }
     try {
       const sinceSeconds = (params.fromTimestamp)
         ? Math.round((Date.now() - params.fromTimestamp) / 1000) : undefined;
