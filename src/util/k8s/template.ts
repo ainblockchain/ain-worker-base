@@ -77,6 +77,13 @@ export default class Template {
           value,
         });
       }
+      if (containerSpec.env['nodePoolLabel']) {
+        const [key, value] = containerSpec.env['nodePoolLabel'].split('=');
+        templateJson.spec.template.spec.nodeSelector = {
+          ...templateJson.spec.template.spec.nodeSelector,
+          [key]: value,
+        };
+      }
     }
 
     if (containerSpec.ports) {
