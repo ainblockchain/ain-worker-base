@@ -29,7 +29,6 @@
     "@ainblockchain/connect-sdk": "0.6.5",
     "@types/bip39": "^3.0.0",
     "@types/dockerode": "^3.2.1",
-    "@types/mustache": "^4.1.2",
     "@types/node": "^16.6.1",
     "bip39": "^3.0.4",
     "commander": "^6.2.0",

@@ -334,9 +334,7 @@ export default class Docker {
     if (!this.dockerImagePathList.includes(imagePath)) {
       this.dockerImagePathList.push(imagePath);
     }
-    if (imagePath.split(":").length === 1) {
-      imagePath += ":latest";
-    }
+
     let authconfig: any;
     if (
       constants.REGISTRY_USERNAME &&
@@ -352,7 +350,7 @@ export default class Docker {
     const pullMethod = () =>
       new Promise<number>((resolve, _) => {
         this.dockerode.pull(
-          imagePath,
+          imagePath.split(":").length === 1 ? `${imagePath}:latest` : imagePath,
           { authconfig },
           async (err: any, stream: any) => {
             function onFinished() {
