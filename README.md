@@ -25,6 +25,7 @@
 
 ## 환경변수
 
+- APP_NAME: AIN Blockchain App 이름 (ex, collaborative_ai)
 - NETWORK_TYPE: "MAINNET" or "TESTNET" or "DEVNET"
 - NAME: Worker 고유 이름
 - ETH_ADDRESS: 보상을 받은 이더리움 주소.
@@ -32,8 +33,8 @@
 - MANAGED_BY: (optional) Manage ID.
 - SERVICE_TYPE: (optional) 서비스 유형(ex. teachable-nlp)
 - SPEC_NAME: (optional) HW SPEC NAME(ex. d4v4)
-- NODE_PORT_IP: (optional) 컨테이너 접근을 위한 IP 로, Docker 버전인 경우 Worker 가 셋업된 머신에 IP 이다.
-- CONTAINER_MAX_CNT: 컨테이너 최대 개수로, Docker 버전 Worker 인 경우 필수 옵션.
+- NODE_PORT_IP: (optional) 컨테이너 접근을 위한 IP.
+- CONTAINER_MAX_CNT: (optional) 컨테이너 최대 개수로, 기본값은 1이다.
 - CONTAINER_VCPU: 한 컨테이너 Core 개수, Docker 버전 Worker 인 경우 필수 옵션.
 - CONTAINER_MEMORY_GB: 한 컨테이너 메모리 용량(GB 단위), Docker 버전 Worker 인 경우 필수 옵션.
 - CONTAINER_GPU_CNT: 한 컨테이너 GPU 개수.
@@ -53,6 +54,7 @@
 
 ```
 docker run -l AinConnect.container=master -d --restart unless-stopped --name worker \
+-e APP_NAME={APP_NAME} \
 -e NETWORK_TYPE={NETWORK_TYPE} \
 -e NAME={NAME} \
 -e ETH_ADDRESS={ETH_ADDRESS} \
@@ -99,6 +101,7 @@ mkdir -p ~/ain-worker/{NAME}
 // npm 패키지 설치.
 yarn
 
+APP_NAME={APP_NAME} \
 NETWORK_TYPE={NETWORK_TYPE} \
 NAME={NAME} \
 ETH_ADDRESS={ETH_ADDRESS} \

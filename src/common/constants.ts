@@ -14,13 +14,13 @@ const env = {
 };
 
 export const {
+  APP_NAME,
   NAME,
   MNEMONIC,
   ETH_ADDRESS,
   MANAGED_BY,
   SERVICE_TYPE,
   SPEC_NAME,
-  CONTAINER_MAX_CNT,
   CONTAINER_VCPU,
   CONTAINER_MEMORY_GB,
   CONTAINER_GPU_CNT,
@@ -34,6 +34,7 @@ export const {
   NODE_PORT_IP,
   GATEWAY_NAME,
   SLACK_WEBHOOK_URL,
+  USE_FIREBASE,
 } = env;
 
 export const NETWORK_TYPE = process.env.NETWORK_TYPE || "MAINNET";
@@ -45,11 +46,13 @@ export const LABEL_FOR_OWNER = "AinConnect.ownerAddress";
 export const LABEL_FOR_AIN_CONNECT = "AinConnect.container";
 export const LABEL_FOR_REQUEST_ID = "AinConnect.requestId";
 
+export const CONTAINER_MAX_CNT = process.env.CONTAINER_MAX_CNT || 1;
+
 export const validateConstants = () => {
   let checkData = {
+    APP_NAME,
     NAME,
     ETH_ADDRESS,
-    CONTAINER_MAX_CNT,
     CONTAINER_VCPU,
     CONTAINER_MEMORY_GB,
     CONTAINER_STORAGE_GB,

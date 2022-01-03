@@ -21,7 +21,9 @@ export default class WorkerBase {
     this.connectSdk = new ConnectSdk.Worker(
       constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
       mnemonic,
-      constants.NAME
+      constants.NAME,
+      constants.APP_NAME,
+      constants.USE_FIREBASE
     );
   }
 
