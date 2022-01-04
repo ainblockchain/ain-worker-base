@@ -23,6 +23,7 @@ export type ContainerInfo = {
     externalPorts: string[];
     GPUDeviceId: string[];
     started: boolean;
+    labels?: { [key: string]: string };
   };
 };
 
@@ -38,6 +39,7 @@ export type DockerRunParams = {
   command?: string[];
   ports: number[];
   labels?: { [key: string]: string };
+  binds?: string[];
 };
 
 export type CreateContainer = {
@@ -47,6 +49,8 @@ export type CreateContainer = {
   command?: string[];
   ports?: { [serviceName: string]: number };
   labels?: { [key: string]: string };
+  downloadFileRef?: string;
+  uploadFileName?: string;
 };
 
 export type DeleteContainer = {
@@ -60,6 +64,9 @@ export type DetailContainerInfo = {
   exitCode?: number;
   status: string;
   serviceStatus?: string;
+  existInputMount: boolean;
+  existOutputMount: boolean;
+  uploadFileName?: string;
 };
 
 export type RequestInfo = {

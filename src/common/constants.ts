@@ -32,6 +32,7 @@ export const {
   REGISTRY_SERVER,
   ROOT_DOMAIN,
   NODE_PORT_IP,
+  ENABLE_STORAGE,
   GATEWAY_NAME,
   SLACK_WEBHOOK_URL,
   USE_FIREBASE,
@@ -45,6 +46,13 @@ export const K8S_CONFIG_PATH =
 export const LABEL_FOR_OWNER = "AinConnect.ownerAddress";
 export const LABEL_FOR_AIN_CONNECT = "AinConnect.container";
 export const LABEL_FOR_REQUEST_ID = "AinConnect.requestId";
+export const ENV_KEY_FOR_INPUT_DATA_PATH = "AinConnect.inputDataPath";
+export const ENV_KEY_FOR_OUTPUT_DATA_PATH = "AinConnect.outputDataPath";
+export const ENV_KEY_FOR_JSON_LOG_FILE_PATH = "AinConnect.jsonLogFilePath";
+export const CONTAINER_ROOT_PATH = "/AinConnect";
+export const ENV_DEFAULT_VALUE_FOR_INPUT_DATA_PATH = `${CONTAINER_ROOT_PATH}/input`;
+export const ENV_DEFAULT_VALUE_FOR_JSON_LOG_FILE_PATH = `${CONTAINER_ROOT_PATH}/log.json`;
+export const LABEL_KEY_FOR_UPLOAD_FILE_NAME = "AinConnect.uploadFileName";
 
 export const CONTAINER_MAX_CNT = process.env.CONTAINER_MAX_CNT || 1;
 

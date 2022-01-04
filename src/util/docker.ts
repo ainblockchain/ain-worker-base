@@ -68,8 +68,14 @@ export default class Docker {
     const connectContainers = await this.getContainerInfosByLabel(
       containerLabel
     );
+
     for (const connectContainer of connectContainers) {
-      const { Names: names, Image: imagePath, Ports: ports } = connectContainer;
+      const {
+        Names: names,
+        Image: imagePath,
+        Ports: ports,
+        Labels,
+      } = connectContainer;
       const name = names[0].replace("/", "");
       const { HostConfig } = await this.getContainerInfo(name);
       this.containerInfo[name] = {
@@ -80,6 +86,7 @@ export default class Docker {
           HostConfig.DeviceRequests && HostConfig.DeviceRequests[0]
             ? HostConfig.DeviceRequests[0].DeviceIDs || []
             : [],
+        labels: Labels,
       };
     }
   }
@@ -112,6 +119,7 @@ export default class Docker {
       command,
       resourceLimit,
       labels,
+      binds,
     } = params;
 
     const exists = await this.existContainer(params.containerId);
@@ -161,6 +169,7 @@ export default class Docker {
       externalPorts: Object.keys(publishPorts),
       GPUDeviceId: gpuDeviceNumbers,
       started: false,
+      labels,
     };
 
     const createOption = {
@@ -176,7 +185,7 @@ export default class Docker {
         }`,
         KernelMemoryTCP: resourceLimit.memoryGB * 1000 * 1000,
         PortBindings: {},
-        Binds: [],
+        Binds: binds || [],
         ShmSize: 4294967296, // 4GB
         DeviceRequests:
           gpuDeviceNumbers.length !== 0

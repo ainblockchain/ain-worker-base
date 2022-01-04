@@ -1,4 +1,6 @@
 import * as ConnectSdk from "@ainblockchain/connect-sdk";
+import * as fs from "fs";
+import * as util from "util";
 import Logger from "./common/logger";
 import Docker from "./util/docker";
 import * as constants from "./common/constants";
@@ -10,6 +12,7 @@ import * as types from "./common/types";
 const log = Logger.createLogger("/worker");
 
 const INTERVAL_QUEUE_CHECK_MS = 10000;
+const readFile = util.promisify(fs.readFile);
 
 export default class WorkerBase {
   static instance: WorkerBase;
@@ -18,16 +21,26 @@ export default class WorkerBase {
 
   static readonly docker = 5000;
 
-  protected connectSdk: ConnectSdk.Worker;
+  protected workerSdk: ConnectSdk.Worker;
+
+  protected storageSdk: ConnectSdk.Storage;
 
   constructor(mnemonic: string) {
-    this.connectSdk = new ConnectSdk.Worker(
+    this.workerSdk = new ConnectSdk.Worker(
       constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
       mnemonic,
       constants.NAME,
       constants.APP_NAME,
       constants.USE_FIREBASE
     );
+    if (constants.ENABLE_STORAGE === "true") {
+      this.storageSdk = new ConnectSdk.Storage(
+        constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
+        mnemonic,
+        constants.NAME,
+        true
+      );
+    }
   }
 
   /**
@@ -64,7 +77,7 @@ export default class WorkerBase {
     setInterval(async () => {
       const requests: {
         [requestId: string]: types.RequestInfo;
-      } | null = await this.connectSdk.getRequestQueue();
+      } | null = await this.workerSdk.getRequestQueue();
       if (requests) {
         const sortedRequestsByCreatedAt = Object.entries(requests).sort(
           ([, a], [, b]) => a.createdAt - b.createdAt
@@ -87,10 +100,14 @@ export default class WorkerBase {
 
     this.listenRequestQueue();
 
+    if (this.storageSdk) {
+      await this.storageSdk.signIn();
+    }
+
     log.info(`[+] Start Worker ( 
       NETWORK_TYPE: ${constants.NETWORK_TYPE}
       Worker Name: ${constants.NAME}
-      Worker Address: ${this.connectSdk.getConnect().getAddress()}
+      Worker Address: ${this.workerSdk.getConnect().getAddress()}
     )`);
   }
 
@@ -101,7 +118,7 @@ export default class WorkerBase {
     const cpuInfo = await utils.getCpuInfo();
     const gpuInfo = await utils.getGpuInfo();
 
-    await this.connectSdk.register({
+    await this.workerSdk.register({
       ethAddress: constants.ETH_ADDRESS,
       containerSpec: {
         cpu: {
@@ -139,50 +156,103 @@ export default class WorkerBase {
         status: string;
         serviceStatus?: string;
         imagePath: string;
+        logs: { [key: string]: string };
       };
     } = {};
 
+    const successExitContainers = [];
     for (const containerId in containerInfo) {
       if (Object.prototype.hasOwnProperty.call(containerInfo, containerId)) {
-        const { status, userAinAddress, serviceStatus, imagePath, exitCode } =
+        const { status, serviceStatus, imagePath, exitCode, requestId } =
           containerInfo[containerId];
         if (status === "exited") {
-          const result = await JobDocker.deleteContainer(
-            {
-              containerId,
-            },
-            userAinAddress
+          await this.responseForExitContainer(
+            containerId,
+            containerInfo[containerId]
           );
-          await this.connectSdk.sendResponse(
-            result.createRequestId,
-            userAinAddress,
-            {
-              data: {
-                ...result,
-                exitCode,
-              },
-            }
-          );
-        } else {
-          runningContainerInfo[containerId] = {
-            status,
-            imagePath,
-          };
-          if (serviceStatus) {
-            runningContainerInfo[containerId] = {
-              ...runningContainerInfo[containerId],
-              serviceStatus,
-            };
+          if (exitCode === 0) {
+            successExitContainers.push(containerInfo[containerId]);
           }
+        } else {
+          const logs = await this.getLogForContainer(requestId);
+          runningContainerInfo[containerId] = serviceStatus
+            ? {
+                status,
+                imagePath,
+                logs,
+                serviceStatus,
+              }
+            : {
+                status,
+                imagePath,
+                logs,
+              };
         }
       }
     }
 
-    await this.connectSdk.updateStatus({
+    await this.workerSdk.updateStatus({
       workerStatus: "running",
       containerInfo: runningContainerInfo,
       currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
     });
+
+    await this.uploadForExitContainer(successExitContainers);
+  }
+
+  private async responseForExitContainer(
+    containerId: string,
+    containerInfo: types.DetailContainerInfo
+  ) {
+    const { exitCode, userAinAddress, requestId } = containerInfo;
+    const logs = await this.getLogForContainer(requestId);
+    const result = await JobDocker.deleteContainer(
+      {
+        containerId,
+      },
+      userAinAddress
+    );
+    await this.workerSdk.sendResponse(result.createRequestId, userAinAddress, {
+      data: {
+        ...result,
+        exitCode,
+        logs,
+      },
+    });
+  }
+
+  private async uploadForExitContainer(
+    containerInfos: types.DetailContainerInfo[]
+  ) {
+    for (const containerInfo of containerInfos) {
+      const { existInputMount, existOutputMount, requestId, uploadFileName } =
+        containerInfo;
+      const rootPath = `${constants.SHARED_PARH}/${requestId}`;
+      if (fs.existsSync(`${rootPath}/${uploadFileName}`)) {
+        await this.storageSdk.uploadFile(
+          `trainResult/${requestId}/${this.workerSdk.getWorkerId()}/${uploadFileName}`, // Temp Path
+          `${rootPath}/${uploadFileName}`
+        );
+      }
+
+      if (existInputMount || existOutputMount) {
+        fs.rmdirSync(rootPath, { recursive: true });
+      }
+    }
+  }
+
+  private async getLogForContainer(requestId: string) {
+    const logfilePath = `${constants.SHARED_PARH}/${requestId}/log.json`;
+    if (fs.existsSync(logfilePath)) {
+      const data = await readFile(logfilePath);
+      try {
+        return JSON.parse(String(data));
+      } catch (err) {
+        log.error(`Failed to Write Log - requestId: ${requestId}`);
+        return {};
+      }
+    }
+    return {};
   }
 
   private async requestHandler(
@@ -196,7 +266,6 @@ export default class WorkerBase {
         4
       )}`
     );
-
     let result;
     try {
       const { requestType, params, userAinAddress } = value;
@@ -204,21 +273,26 @@ export default class WorkerBase {
         result = await JobDocker.createContainer(
           params,
           userAinAddress,
-          requestId
+          requestId,
+          this.storageSdk
         );
       } else if (requestType === "deleteContainer") {
         result = await JobDocker.deleteContainer(params, userAinAddress);
-        await this.connectSdk.sendResponse(
+        const logs = await this.getLogForContainer(result.createRequestId);
+        await this.workerSdk.sendResponse(
           result.createRequestId,
           value.userAinAddress,
           {
-            data: result,
+            data: {
+              ...result,
+              logs,
+            },
           }
         );
       } else {
         throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
       }
-      await this.connectSdk
+      await this.workerSdk
         .sendResponse(requestId, value.userAinAddress, {
           data: {
             ...result,
@@ -243,9 +317,9 @@ export default class WorkerBase {
           statusCode: ErrorCode.UNEXPECTED,
         };
       }
-      await this.connectSdk
+      await this.workerSdk
         .sendResponse(requestId, value.userAinAddress, data)
-        .catch((err) => {
+        .catch((err: any) => {
           log.error(`[-] Failed to send Response - ${err}`);
         });
     }
