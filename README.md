@@ -8,15 +8,15 @@
 
 ## About Repository
 
-이 레파지토리는 AI Network 에 본인 머신을 연결하여, 머신 리소스 제공자로서 보상을 받을 수 있도록 하는 프로젝트이다.
+This repository is a project that allows you to receive rewards as a machine resource provider by connecting your machine to the AI ​​Network.
+
 
 ## Getting Started
 
 ### prerequisites
 
-- Install Docker
-- (optional) GPU 까지 제공하고 싶다면 Docker 에서 GPU 를 사용할 수 있도록 해야함. (셋업&확인 링크)
-- 본인 HW 머신에 CPU,MEMORY,DISK,GPU 스펙을 확인하고, 얼마나 할당할 것인지 정한다. (확인하는 방법 링크)
+- Linux (OS)
+- Docker (or With GPU)
 
 ### How To Run
 
@@ -28,29 +28,29 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name ain
 ainblockchain/ain-connect-base:revamp
 ```
 
-- ENV_DATA 에 환경 변수 리스트를 참고하여 추가한다.
-- GPU 도 제공하고 싶다면 --gpu all 을 추가한다.
+- fill in ENV DATA [ENV](#ENV) 
+- About docker with gpu, Add Option "--gpus all"
 
-### ENV LIST
+### ENV
 
 | ENV KEY                  | Description                                                                                               |
 | ------------------------ | --------------------------------------------------------------------------------------------------------- |
 | **NAME**                 | Worker Name. (ex. comcom-worker)                                                                          |
 | **APP_NAME**             | AI Network Blockchain APP Name. (ex. collaborative_ai)                                                    |
-| **CONTAINER_VCPU**       | 한 컨테이너의 CPU Core 개수                                                                               |
-| **CONTAINER_MEMORY_GB**  | 한 컨테이너의 MEMORY 용량 (단위: GB)                                                                      |
-| **DISK_GB**              | 머신 총 DISK 용량 (단위: GB).                                                                             |
-| **CONTAINER_GPU_CNT**    | 한 컨테이너의 GPU 개수.                                                                                   |
-| **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs 로 ID 사이를 ','로 구분한다. (ex. 1,2,3...)                                     |
-| **CONTAINER_MAX_CNT**    | (Optional) 컨테이너 최대 개수로, 기본값은 1이다.                                                          |
-| **NODE_PORT_IP**         | (Optional) 컨테이너 접근을 위한 IP(외부에서 접근 가능한 IP).                                              |
-| **CONTAINER_ALLOW_PORT** | 사용 가능한 외부 포트들로 포트 범위는 '-'로 구분하고, 각 범위들은 ',' 로 구분한다. ex. '80-83,8888-88889' |
-| **MANAGED_BY**           | (Optional) 관리자 정보 (ex. comcom)                                                                       |
+| **CONTAINER_VCPU**       | A Container CPU Core                                                                               |
+| **CONTAINER_MEMORY_GB**  | A Container MEMORY Capacity ( GB)                                                                      |
+| **DISK_GB**              | DISK Capacity (GB).                                                                             |
+| **CONTAINER_GPU_CNT**    |  A Container Number of GPUs                                                                                  |
+| **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                     |
+| **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                          |
+| **NODE_PORT_IP**         | (Optional) ㄹor container access IP (accessible IP from outside).                                              |
+| **CONTAINER_ALLOW_PORT** | Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
+| **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                       |
 | **SERVICE_TYPE**         | (Optional)                                                                                                |
-| **SPEC_NAME**            | (Optional) 머신 스펙 이름 (ex. high-gpu)                                                                  |
-| **MNEMONIC**             | (Optional) AIN MNEMONIC 으로, 없으면 자동으로 생성하여 $HOME/ain-worker/{NAME}/env.json 에 저장한다.      |
-| **ETH_ADDRESS**          | (Optional) 이더리움 주소.                                                                                 |
-| **SLACK_WEBHOOK_URL**    | (Optional) 슬랙으로 Worker 에러 로그를 받고 싶은 경우 필요한 Webhook url                                  |
+| **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                  |
+| **MNEMONIC**             | (Optional) if it does not exist, it is automatically created and saved in $HOME/ain-worker/{NAME}/env.json.      |
+| **ETH_ADDRESS**          | (Optional) Ethereum Address 주소.                                                                                 |
+| **SLACK_WEBHOOK_URL**    | (Optional) Slack Webhook URL |
 
 #### example
 ```
