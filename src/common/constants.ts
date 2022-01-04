@@ -24,7 +24,7 @@ export const {
   CONTAINER_VCPU,
   CONTAINER_MEMORY_GB,
   CONTAINER_GPU_CNT,
-  CONTAINER_STORAGE_GB,
+  DISK_GB,
   CONTAINER_ALLOW_PORT,
   GPU_DEVICE_NUMBER,
   REGISTRY_USERNAME,
@@ -52,10 +52,9 @@ export const validateConstants = () => {
   let checkData = {
     APP_NAME,
     NAME,
-    ETH_ADDRESS,
     CONTAINER_VCPU,
     CONTAINER_MEMORY_GB,
-    CONTAINER_STORAGE_GB,
+    DISK_GB,
   } as any;
 
   if (!NODE_PORT_IP) {

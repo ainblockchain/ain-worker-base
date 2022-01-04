@@ -61,3 +61,10 @@ export type DetailContainerInfo = {
   status: string;
   serviceStatus?: string;
 };
+
+export type RequestInfo = {
+  requestType: string;
+  params: any;
+  userAinAddress: string;
+  createdAt: number;
+};

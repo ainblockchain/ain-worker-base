@@ -85,9 +85,10 @@ export default class Docker {
   }
 
   async checkGPUDocker() {
+    const checkContainerId = "connectGpuChecker";
     await this.run({
       imagePath: "ubuntu:18.04",
-      containerId: "connectGpuChecker",
+      containerId: checkContainerId,
       command: ["tail", "-f"],
       ports: [],
       resourceLimit: {
@@ -96,7 +97,7 @@ export default class Docker {
         gpuCnt: 1,
       },
     });
-    await this.kill("connectGpuChecker");
+    await this.kill(checkContainerId);
   }
 
   /**

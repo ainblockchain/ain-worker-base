@@ -5,8 +5,11 @@ import * as constants from "./common/constants";
 import * as utils from "./util/utils";
 import * as JobDocker from "./job/docker";
 import { ErrorCode, CustomError } from "./common/error";
+import * as types from "./common/types";
 
 const log = Logger.createLogger("/worker");
+
+const INTERVAL_QUEUE_CHECK_MS = 10000;
 
 export default class WorkerBase {
   static instance: WorkerBase;
@@ -57,6 +60,23 @@ export default class WorkerBase {
     );
   }
 
+  public listenRequestQueue() {
+    setInterval(async () => {
+      const requests: {
+        [requestId: string]: types.RequestInfo;
+      } | null = await this.connectSdk.getRequestQueue();
+      if (requests) {
+        const sortedRequestsByCreatedAt = Object.entries(requests).sort(
+          ([, a], [, b]) => a.createdAt - b.createdAt
+        );
+        if (sortedRequestsByCreatedAt.length !== 0) {
+          const [requestId, value] = sortedRequestsByCreatedAt[0];
+          await this.requestHandler(requestId, value);
+        }
+      }
+    }, INTERVAL_QUEUE_CHECK_MS);
+  }
+
   public async start() {
     // Register
     await this.register();
@@ -65,11 +85,7 @@ export default class WorkerBase {
       await this.updateStatus();
     }, WorkerBase.updateStatusTimeMs);
 
-    this.connectSdk.listenRequestQueue(
-      async (ref: string, value: ConnectSdk.Types.ListenRequestQueueValue) => {
-        await this.requestHandler(ref, value);
-      }
-    );
+    this.listenRequestQueue();
 
     log.info(`[+] Start Worker ( 
       NETWORK_TYPE: ${constants.NETWORK_TYPE}
@@ -103,7 +119,7 @@ export default class WorkerBase {
           maxGB: Number(constants.CONTAINER_MEMORY_GB),
         },
         storage: {
-          maxGB: Number(constants.CONTAINER_STORAGE_GB),
+          maxGB: Number(constants.DISK_GB),
         },
         maxNumberOfContainer: Number(constants.CONTAINER_MAX_CNT),
         hasEndpoint: !!constants.CONTAINER_ALLOW_PORT,
@@ -170,14 +186,17 @@ export default class WorkerBase {
   }
 
   private async requestHandler(
-    ref: string,
+    requestId: string,
     value: ConnectSdk.Types.ListenRequestQueueValue
   ) {
     log.debug(
-      `[+] Request ref: ${ref}, value: ${JSON.stringify(value, null, 4)}`
+      `[+] Request requestId: ${requestId}, value: ${JSON.stringify(
+        value,
+        null,
+        4
+      )}`
     );
 
-    const requestId = ref.split("/").reverse()[0];
     let result;
     try {
       const { requestType, params, userAinAddress } = value;
@@ -209,9 +228,9 @@ export default class WorkerBase {
         .catch((err) => {
           log.error(`[-] Failed to send Response ${err.message}`);
         });
-      log.debug(`[-] Success! ref: ${ref}`);
+      log.debug(`[-] Success! requestId: ${requestId}`);
     } catch (error) {
-      log.error(`[-] Failed! ref: ${ref} - ${error}`);
+      log.error(`[-] Failed! requestId: ${requestId} - ${error}`);
       let data = {};
       if (Object.values(ErrorCode).includes(error.statusCode)) {
         data = {

@@ -26,9 +26,10 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@ainblockchain/connect-sdk": "0.7.1",
+    "@ainblockchain/connect-sdk": "0.8.2",
     "@types/bip39": "^3.0.0",
     "@types/dockerode": "^3.2.1",
+    "@types/hdkey": "^2.0.0",
     "@types/node": "^16.6.1",
     "bip39": "^3.0.4",
     "commander": "^6.2.0",
@@ -51,7 +52,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "yarn test && yarn lint"
+      "pre-commit": "yarn lint"
     }
   }
 }
