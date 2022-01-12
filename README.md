@@ -43,8 +43,8 @@ ainblockchain/ain-worker
 | **CONTAINER_GPU_CNT**    |  A Container Number of GPUs                                                                                  |
 | **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                     |
 | **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                          |
+| **CONTAINER_ALLOW_PORT** | Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
 | **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                              |
-| **CONTAINER_ALLOW_PORT** | (Optional) Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
 | **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                       |
 | **SERVICE_TYPE**         | (Optional)                                                                                                |
 | **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                  |
