@@ -57,10 +57,10 @@ ainblockchain/ain-worker
 // Non-GPU
 docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker \
 -e APP_NAME=collaborative_ai \
--e NAME={NAME}
--e CONTAINER_VCPU=1
--e CONTAINER_MEMORY_GB=3
--e DISK_GB=50
+-e NAME={NAME} \
+-e CONTAINER_VCPU=1 \
+-e CONTAINER_MEMORY_GB=3 \
+-e DISK_GB=50 \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
 ainblockchain/ain-worker
@@ -69,12 +69,12 @@ ainblockchain/ain-worker
 // GPU
 docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker --gpus all \
 -e APP_NAME=collaborative_ai \
--e NAME={NAME}
--e CONTAINER_VCPU=1
--e CONTAINER_MEMORY_GB=3
--e CONTAINER_GPU_CNT=1
--e GPU_DEVICE_NUMBER=0
--e DISK_GB=50
+-e NAME={NAME} \
+-e CONTAINER_VCPU=1 \
+-e CONTAINER_MEMORY_GB=3 \
+-e CONTAINER_GPU_CNT=1 \
+-e GPU_DEVICE_NUMBER=0 \
+-e DISK_GB=50 \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
 ainblockchain/ain-worker
