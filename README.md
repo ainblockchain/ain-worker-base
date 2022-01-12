@@ -25,7 +25,7 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name ain
 [-e {ENV_DATA}] \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
-ainblockchain/ain-connect-base:revamp
+ainblockchain/ain-worker
 ```
 
 - fill in ENV DATA [ENV](#ENV) 
@@ -63,7 +63,7 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name ain
 -e DISK_GB=50
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
-ainblockchain/ain-connect-base:revamp
+ainblockchain/ain-worker
 
 
 // GPU
