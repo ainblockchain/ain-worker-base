@@ -14,14 +14,17 @@ export const exec = util.promisify(childProcess.exec);
 export const fileExists = (filePath: string) => fs.existsSync(filePath);
 
 export function replaceFileSync(filePath: string, value: any) {
-  if (!fileExists(filePath)) {
-    const filePathList = filePath.split("/");
-    fs.mkdirSync(filePathList.slice(0, filePathList.length - 1).join("/"));
-    fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
-    return;
+  const filePathList = filePath.split("/");
+  const rootPath = filePathList.slice(0, filePathList.length - 1).join("/");
+  if (!fileExists(rootPath)) {
+    fs.mkdirSync(rootPath);
   }
-  fs.truncateSync(filePath, 0);
-  fs.appendFileSync(filePath, JSON.stringify(value, null, 2));
+  if (!fileExists(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(value, null, 2));
+  } else {
+    fs.truncateSync(filePath, 0);
+    fs.appendFileSync(filePath, JSON.stringify(value, null, 2));
+  }
 }
 
 export async function getGpuInfo(): Promise<types.GPUInfo> {

@@ -42,14 +42,17 @@ export default class Docker {
 
   async init(containerLabel: string) {
     // Init allowPort
-    const portRangeList = constants.CONTAINER_ALLOW_PORT.split(",");
-    for (const portRange of portRangeList) {
-      const [first, second] = portRange.split("-");
-      const endPort = second || first;
-      for (let port = Number(first); port <= Number(endPort); port += 1) {
-        this.allowPorts[port] = true;
+    if (constants.CONTAINER_ALLOW_PORT) {
+      const portRangeList = constants.CONTAINER_ALLOW_PORT.split(",");
+      for (const portRange of portRangeList) {
+        const [first, second] = portRange.split("-");
+        const endPort = second || first;
+        for (let port = Number(first); port <= Number(endPort); port += 1) {
+          this.allowPorts[port] = true;
+        }
       }
     }
+
     // Init allowGPUDevice
     const deviceIdList = constants.GPU_DEVICE_NUMBER
       ? constants.GPU_DEVICE_NUMBER.split(",")

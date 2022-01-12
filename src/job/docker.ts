@@ -58,7 +58,7 @@ async function createContainer(
     throw new CustomError(ErrorCode.NOT_SUPPORTED, "ENDPOINT Not Supported");
   }
 
-  const rootPath = `${constants.SHARED_PARH}/${requestId}`;
+  const rootPath = `${constants.SHARED_PATH}/${requestId}`;
   if (downloadFileRef || uploadFileName) {
     if (!storageSdk) {
       throw new CustomError(

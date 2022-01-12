@@ -1,7 +1,7 @@
 import * as fs from "fs";
 
-export const SHARED_PARH = `${process.env.HOME}/ain-worker/${process.env.NAME}`;
-export const ENV_PATH = `${SHARED_PARH}/env.json`;
+export const SHARED_PATH = `${process.env.HOME}/ain-worker/${process.env.NAME}`;
+export const ENV_PATH = `${SHARED_PATH}/env.json`;
 
 export const envFileData = fs.existsSync(ENV_PATH)
   ? JSON.parse(String(fs.readFileSync(ENV_PATH)))

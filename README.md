@@ -10,7 +10,6 @@
 
 This repository is a project that allows you to receive rewards as a machine resource provider by connecting your machine to the AI ​​Network.
 
-
 ## Getting Started
 
 ### prerequisites
@@ -28,31 +27,32 @@ docker run -l AinConnect.container=master -d --restart unless-stopped --name ain
 ainblockchain/ain-worker
 ```
 
-- fill in ENV DATA [ENV](#ENV) 
+- fill in ENV DATA [ENV](#ENV)
 - About docker with gpu, Add Option "--gpus all"
 
 ### ENV
 
-| ENV KEY                  | Description                                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------------------------- |
-| **NAME**                 |  Worker Name. (ex. comcom-worker)                                                                          |
-| **APP_NAME**             |  AI Network Blockchain APP Name. (ex. collaborative_ai)                                                    |
-| **CONTAINER_VCPU**       |  A Container CPU Core                                                                               |
-| **CONTAINER_MEMORY_GB**  |  A Container MEMORY Capacity ( GB)                                                                      |
-| **DISK_GB**              |  DISK Capacity (GB).                                                                             |
-| **CONTAINER_GPU_CNT**    |  A Container Number of GPUs                                                                                  |
-| **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                     |
-| **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                          |
-| **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                              |
+| ENV KEY                  | Description                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **NAME**                 | Worker Name. (ex. comcom-worker)                                                                                          |
+| **APP_NAME**             | AI Network Blockchain APP Name. (ex. collaborative_ai)                                                                    |
+| **CONTAINER_VCPU**       | A Container CPU Core                                                                                                      |
+| **CONTAINER_MEMORY_GB**  | A Container MEMORY Capacity ( GB)                                                                                         |
+| **DISK_GB**              | DISK Capacity (GB).                                                                                                       |
+| **CONTAINER_GPU_CNT**    | A Container Number of GPUs                                                                                                |
+| **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                                         |
+| **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                                |
+| **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                                              |
 | **CONTAINER_ALLOW_PORT** | (Optional) Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
-| **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                       |
-| **SERVICE_TYPE**         | (Optional)                                                                                                |
-| **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                  |
-| **MNEMONIC**             | (Optional) if it does not exist, it is automatically created and saved in $HOME/ain-worker/{NAME}/env.json.      |
-| **ETH_ADDRESS**          | (Optional) Ethereum Address 주소.                                                                                 |
-| **SLACK_WEBHOOK_URL**    | (Optional) Slack Webhook URL |
+| **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                                      |
+| **SERVICE_TYPE**         | (Optional)                                                                                                                |
+| **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                               |
+| **MNEMONIC**             | (Optional) if it does not exist, it is automatically created and saved in $HOME/ain-worker/{NAME}/env.json.               |
+| **ETH_ADDRESS**          | (Optional) Ethereum Address 주소.                                                                                         |
+| **SLACK_WEBHOOK_URL**    | (Optional) Slack Webhook URL                                                                                              |
 
 #### example
+
 ```
 // Non-GPU
 docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker \

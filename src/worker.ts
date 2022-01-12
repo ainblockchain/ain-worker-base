@@ -227,7 +227,7 @@ export default class WorkerBase {
     for (const containerInfo of containerInfos) {
       const { existInputMount, existOutputMount, requestId, uploadFileName } =
         containerInfo;
-      const rootPath = `${constants.SHARED_PARH}/${requestId}`;
+      const rootPath = `${constants.SHARED_PATH}/${requestId}`;
       if (fs.existsSync(`${rootPath}/${uploadFileName}`)) {
         await this.storageSdk.uploadFile(
           `trainResult/${requestId}/${this.workerSdk.getWorkerId()}/${uploadFileName}`, // Temp Path
@@ -242,7 +242,7 @@ export default class WorkerBase {
   }
 
   private async getLogForContainer(requestId: string) {
-    const logfilePath = `${constants.SHARED_PARH}/${requestId}/log.json`;
+    const logfilePath = `${constants.SHARED_PATH}/${requestId}/log.json`;
     if (fs.existsSync(logfilePath)) {
       const data = await readFile(logfilePath);
       try {
