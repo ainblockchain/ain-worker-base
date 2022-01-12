@@ -35,16 +35,16 @@ ainblockchain/ain-worker
 
 | ENV KEY                  | Description                                                                                               |
 | ------------------------ | --------------------------------------------------------------------------------------------------------- |
-| **NAME**                 | Worker Name. (ex. comcom-worker)                                                                          |
-| **APP_NAME**             | AI Network Blockchain APP Name. (ex. collaborative_ai)                                                    |
-| **CONTAINER_VCPU**       | A Container CPU Core                                                                               |
-| **CONTAINER_MEMORY_GB**  | A Container MEMORY Capacity ( GB)                                                                      |
-| **DISK_GB**              | DISK Capacity (GB).                                                                             |
+| **NAME**                 |  Worker Name. (ex. comcom-worker)                                                                          |
+| **APP_NAME**             |  AI Network Blockchain APP Name. (ex. collaborative_ai)                                                    |
+| **CONTAINER_VCPU**       |  A Container CPU Core                                                                               |
+| **CONTAINER_MEMORY_GB**  |  A Container MEMORY Capacity ( GB)                                                                      |
+| **DISK_GB**              |  DISK Capacity (GB).                                                                             |
 | **CONTAINER_GPU_CNT**    |  A Container Number of GPUs                                                                                  |
 | **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                     |
 | **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                          |
-| **CONTAINER_ALLOW_PORT** | Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
 | **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                              |
+| **CONTAINER_ALLOW_PORT** | (Optional) Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
 | **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                       |
 | **SERVICE_TYPE**         | (Optional)                                                                                                |
 | **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                  |
