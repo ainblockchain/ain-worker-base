@@ -65,7 +65,7 @@ export const validateConstants = () => {
     DISK_GB,
   } as any;
 
-  if (!NODE_PORT_IP) {
+  if (NODE_PORT_IP) {
     checkData = {
       ...checkData,
       CONTAINER_ALLOW_PORT,
