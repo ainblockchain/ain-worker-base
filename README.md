@@ -36,10 +36,10 @@ ainblockchain/ain-worker
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | **NAME**                 | Worker Name. (ex. comcom-worker)                                                                                          |
 | **APP_NAME**             | AI Network Blockchain APP Name. (ex. collaborative_ai)                                                                    |
-| **CONTAINER_VCPU**       | A Container CPU Core                                                                                                      |
-| **CONTAINER_MEMORY_GB**  | A Container MEMORY Capacity ( GB)                                                                                         |
-| **DISK_GB**              | DISK Capacity (GB).                                                                                                       |
-| **CONTAINER_GPU_CNT**    | A Container Number of GPUs                                                                                                |
+| **CONTAINER_VCPU**       | (Optional) A Container CPU Core (default: 1)                                                                              |
+| **CONTAINER_MEMORY_GB**  | (Optional) A Container MEMORY Capacity (default: 4)                                                                       |
+| **DISK_GB**              | (Optional) DISK Capacity (default: 50)                                                                                    |
+| **CONTAINER_GPU_CNT**    | (Optional) A Container Number of GPUs                                                                                     |
 | **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                                         |
 | **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. Default is 1.                                                                |
 | **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                                              |

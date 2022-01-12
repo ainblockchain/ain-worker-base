@@ -21,10 +21,7 @@ export const {
   MANAGED_BY,
   SERVICE_TYPE,
   SPEC_NAME,
-  CONTAINER_VCPU,
-  CONTAINER_MEMORY_GB,
   CONTAINER_GPU_CNT,
-  DISK_GB,
   CONTAINER_ALLOW_PORT,
   GPU_DEVICE_NUMBER,
   REGISTRY_USERNAME,
@@ -55,14 +52,14 @@ export const ENV_DEFAULT_VALUE_FOR_JSON_LOG_FILE_PATH = `${CONTAINER_ROOT_PATH}/
 export const LABEL_KEY_FOR_UPLOAD_FILE_NAME = "AinConnect.uploadFileName";
 
 export const CONTAINER_MAX_CNT = process.env.CONTAINER_MAX_CNT || 1;
+export const CONTAINER_VCPU = process.env.CONTAINER_VCPU || 1;
+export const CONTAINER_MEMORY_GB = process.env.CONTAINER_MAX_CNT || 4;
+export const DISK_GB = process.env.CONTAINER_MAX_CNT || 50;
 
 export const validateConstants = () => {
   let checkData = {
     APP_NAME,
     NAME,
-    CONTAINER_VCPU,
-    CONTAINER_MEMORY_GB,
-    DISK_GB,
   } as any;
 
   if (NODE_PORT_IP) {
