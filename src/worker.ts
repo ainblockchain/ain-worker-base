@@ -11,7 +11,7 @@ import * as types from "./common/types";
 
 const log = Logger.createLogger("/worker");
 
-const INTERVAL_QUEUE_CHECK_MS = 10000;
+const INTERVAL_QUEUE_CHECK_MS = 30000;
 const readFile = util.promisify(fs.readFile);
 
 export default class WorkerBase {
@@ -30,15 +30,13 @@ export default class WorkerBase {
       constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
       mnemonic,
       constants.NAME,
-      constants.APP_NAME,
-      constants.USE_FIREBASE
+      constants.APP_NAME
     );
     if (constants.ENABLE_STORAGE === "true") {
       this.storageSdk = new ConnectSdk.Storage(
         constants.NETWORK_TYPE as ConnectSdk.Types.NetworkType,
         mnemonic,
-        constants.NAME,
-        true
+        constants.NAME
       );
     }
   }
@@ -190,10 +188,12 @@ export default class WorkerBase {
         }
       }
     }
-
     await this.workerSdk.updateStatus({
       workerStatus: "running",
-      containerInfo: runningContainerInfo,
+      containerInfo:
+        Object.keys(runningContainerInfo).length === 0
+          ? undefined
+          : runningContainerInfo,
       currentNumberOfContainer: Docker.getInstance().getContainerCnt(),
     });
 

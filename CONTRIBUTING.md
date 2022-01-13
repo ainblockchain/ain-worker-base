@@ -11,14 +11,15 @@
 <br>
 
 # Code structure description (src)
+
 - common: A collection of commonly used modules and variables.
 - job: A collection of request job Method.
 - util: utility code collections
 - index.ts: entry point.
 - worker.ts: About AIN Connect.
 
-
 ## How To Run
+
 ```
 mkdir -p ~/ain-worker/{NAME}
 

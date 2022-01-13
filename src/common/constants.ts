@@ -32,7 +32,6 @@ export const {
   ENABLE_STORAGE,
   GATEWAY_NAME,
   SLACK_WEBHOOK_URL,
-  USE_FIREBASE,
 } = env;
 
 export const NETWORK_TYPE = process.env.NETWORK_TYPE || "MAINNET";
