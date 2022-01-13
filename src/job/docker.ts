@@ -125,11 +125,13 @@ async function createContainer(
   });
 
   const endpoint = {};
-  Object.entries(result.publishPorts).forEach(([extenalPort, internalPort]) => {
-    endpoint[
-      portToService[internalPort]
-    ] = `${constants.NODE_PORT_IP}:${extenalPort}`;
-  });
+  Object.entries(result.publishPorts).forEach(
+    ([externalPort, internalPort]) => {
+      endpoint[
+        portToService[internalPort]
+      ] = `${constants.NODE_PORT_IP}:${externalPort}`;
+    }
+  );
 
   return {
     containerId,
@@ -148,7 +150,7 @@ async function deleteContainer(
   return {
     containerId: params.containerId,
     status: "terminated",
-    termindatedAt: Date.now(),
+    terminatedAt: Date.now(),
     createRequestId: requestId,
   };
 }
