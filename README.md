@@ -1,63 +1,119 @@
-<h1 align="center">AIN Connect Worker Base</h1>
-<h4 align="center">AIN Connect 와 연결하여 HW 생태계를 만들어주는 프로젝트이다.</h4>
-                                                                                                
-**AIN Worker** 프로젝트는 Node.js로 작성되었습니다.
+# AIN Worker
 
-<br>
+## Index
 
-## 🛠사전 설치
+- [Getting Started](#getting-started)
+- [Contributing](#contributing)
+- [License](#license)
 
-- ESLint 가 지원되는 에디터 (IntelliJ, VSCode 등)
-- Node.js 12.16+
-- Yarn 1.22+ (`npm install -g yarn`)
+## About Repository
 
-<br>
+This repository is a project that allows you to receive rewards as a machine resource provider by connecting your machine to the AI ​​Network.
 
-## env.json 작성
+## Getting Started
+
+### prerequisites
+
+- Linux (OS)
+- Docker (or With GPU)
+
+### How To Run
+
 ```
-{
-  "CLUSTER_NAME": "", // 클러스터 별칭
-  "REGISTRY_USERNAME": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 유저 네임.
-  "REGISTRY_PASSWORD": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 비밀번호.
-  "REGISTRY_SERVER": "", // (optional) Private 도커 레지스트리를 사용하는 경우에 필요한 레지스트리 주소.
-  "NODE_PORT_IP": "", // (optional) istio 없이 NodePort 로만 Endpoint 를 만드는 경우에 필요한 쿠버네티스 외부 IP.
-  "IS_DOCKER": "", // true 인 경우 도커 버전으로 워커를 시작함. (false 인 경우는 쿠버네티스 버전으로 시작.)
-  "STORAGE_CLASS": "" // (optional) PVC 생성할 때 사용되는 Storage Class.
-}
-```
-
-## 도커로 시작
-```
-// For K8s
-docker run -d --name worker-k8s -v {/PATH/TO/CONFIG}:/worker/env.json -v {k8s config path}:/worker/config.yaml ainblockchain/ain-connect-base:<TAG>
-// For Docker
-docker run -d --name worker-docker -v {/PATH/TO/CONFIG}:/worker/env.json -v /var/run/docker.sock:/var/run/docker.sock ainblockchain/ain-connect-base:<TAG>
-```
-- /PATH/TO/CONFIG에 env.sample.json을 참고하여 파일을 생성한다.
-
-## 유닛 테스트 실행
-```
-yarn test
+docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker \
+[-e {ENV_DATA}] \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
+ainblockchain/ain-worker
 ```
 
-## 코드 스타일 검사
+- fill in ENV DATA [ENV](#ENV)
+- About docker with gpu, Add Option "--gpus all"
+
+### ENV
+
+| ENV KEY                  | Description                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **NAME**                 | Worker Name. (ex. comcom-worker)                                                                                          |
+| **APP_NAME**             | AI Network Blockchain APP Name. (ex. collaborative_ai)                                                                    |
+| **CONTAINER_VCPU**       | (Optional) A Container CPU Core (default: 1)                                                                              |
+| **CONTAINER_MEMORY_GB**  | (Optional) A Container MEMORY Capacity (default: 4)                                                                       |
+| **DISK_GB**              | (Optional) DISK Capacity (default: 50)                                                                                    |
+| **CONTAINER_GPU_CNT**    | (Optional) A Container Number of GPUs                                                                                     |
+| **GPU_DEVICE_NUMBER**    | (Optional) GPU Device IDs, (Separate IDs with ',') (ex. 1,2,3...)                                                         |
+| **CONTAINER_MAX_CNT**    | (Optional) The maximum number of containers. (default: 1)                                                                 |
+| **NODE_PORT_IP**         | (Optional) container access IP (accessible IP from outside).                                                              |
+| **CONTAINER_ALLOW_PORT** | (Optional) Available ports, Port ranges are separated by '-', and each range is separated by ',' (ex. '80-83,8888-88889') |
+| **MANAGED_BY**           | (Optional) Manager Name (ex. comcom)                                                                                      |
+| **SERVICE_TYPE**         | (Optional)                                                                                                                |
+| **SPEC_NAME**            | (Optional) Machine Spec Name (ex. high-gpu)                                                                               |
+| **MNEMONIC**             | (Optional) if it does not exist, it is automatically created and saved in $HOME/ain-worker/{NAME}/env.json.               |
+| **ETH_ADDRESS**          | (Optional) Ethereum Address 주소.                                                                                         |
+| **SLACK_WEBHOOK_URL**    | (Optional) Slack Webhook URL                                                                                              |
+
+#### example
+
 ```
-yarn lint
+// Non-GPU
+docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker \
+-e APP_NAME=collaborative_ai \
+-e NAME={NAME} \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
+ainblockchain/ain-worker
+
+
+// GPU
+docker run -l AinConnect.container=master -d --restart unless-stopped --name ain-worker --gpus all \
+-e APP_NAME=collaborative_ai \
+-e NAME={NAME} \
+-e CONTAINER_GPU_CNT=1 \
+-e GPU_DEVICE_NUMBER=0 \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v $HOME/ain-worker/{NAME}:/root/ain-worker/{NAME} \
+ainblockchain/ain-worker
 ```
 
-## NPM 배포
+### How to Get Log
+
 ```
-./build
-// (1) 버전을 확인한다.
-npm publish --access=public
+docker logs -f --name ain-worker
 ```
-- npm login을 한다.
 
+### How to Terminate
 
-# 코드 구조 설명 (src)
-- common: 공통으로 사용하는 모듈 및 변수 모음
-- manager: 관리 로직 모음
-- util: 기능 로직 모음
-- _test_: 유닛 테스트 코드
+```
+docker rm -f $(docker ps -f "label=AinConnect.container" -q -a)
+```
 
-<br>
+## Contributing
+
+I am looking for someone to help with this project. Please advise and point out.  
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code
+of conduct, and the process for submitting pull requests to us.
+
+## License
+
+```
+MIT License
+
+Copyright (c) 2020 Common Computer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
