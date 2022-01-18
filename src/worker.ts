@@ -93,7 +93,11 @@ export default class WorkerBase {
     await this.register();
     // Heath Check.
     setInterval(async () => {
-      await this.updateStatus();
+      try {
+        await this.updateStatus();
+      } catch (err) {
+        log.error(`Failed to Update Status For Worker: ${err}`);
+      }
     }, WorkerBase.updateStatusTimeMs);
 
     this.listenRequestQueue();
