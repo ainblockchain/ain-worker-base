@@ -15,7 +15,6 @@ RUN tsc
 
 FROM node:12.16.1-slim
 
-
 RUN mkdir /worker
 WORKDIR /worker
 
@@ -23,5 +22,5 @@ ADD package.json /worker
 ADD yarn.lock /worker
 RUN npm install --only=prod
 COPY --from=build /worker/dist /worker/dist
- 
+
 CMD ["node", "dist/index.js", "serve"]
