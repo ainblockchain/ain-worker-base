@@ -75,7 +75,9 @@ export default class WorkerBase {
     setInterval(async () => {
       const requests: {
         [requestId: string]: types.RequestInfo;
-      } | null = await this.workerSdk.getRequestQueue();
+      } | null = await this.workerSdk.getRequestQueue({
+        is_final: true,
+      });
       if (requests) {
         const sortedRequestsByCreatedAt = Object.entries(requests).sort(
           ([, a], [, b]) => a.createdAt - b.createdAt
