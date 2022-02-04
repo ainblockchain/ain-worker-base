@@ -72,6 +72,7 @@ export default class WorkerBase {
   }
 
   public listenRequestQueue() {
+    const handledRequestSet = new Set();
     setInterval(async () => {
       const requests: {
         [requestId: string]: types.RequestInfo;
@@ -84,6 +85,10 @@ export default class WorkerBase {
         );
         if (sortedRequestsByCreatedAt.length !== 0) {
           const [requestId, value] = sortedRequestsByCreatedAt[0];
+          if (handledRequestSet.has(requestId)) {
+            return;
+          }
+          handledRequestSet.add(requestId);
           await this.requestHandler(requestId, value);
         }
       }
