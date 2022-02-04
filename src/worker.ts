@@ -255,10 +255,10 @@ export default class WorkerBase {
         return JSON.parse(String(data));
       } catch (err) {
         log.error(`Failed to Write Log - requestId: ${requestId}`);
-        return {};
+        return null;
       }
     }
-    return {};
+    return null;
   }
 
   private async requestHandler(
