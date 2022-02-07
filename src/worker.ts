@@ -290,32 +290,32 @@ export default class WorkerBase {
           requestId,
           this.storageSdk
         );
+        await this.workerSdk
+          .sendResponse(requestId, value.userAinAddress, {
+            data: {
+              ...result,
+              statusCode: 200,
+            },
+          })
+          .catch((err) => {
+            log.error(`[-] Failed to send Response ${err.message}`);
+          });
       } else if (requestType === "deleteContainer") {
         result = await JobDocker.deleteContainer(params, userAinAddress);
         const logs = await this.getLogForContainer(result.createRequestId);
-        await this.workerSdk.sendResponse(
-          result.createRequestId,
-          value.userAinAddress,
-          {
+        await this.workerSdk
+          .sendResponse(requestId, value.userAinAddress, {
             data: {
               ...result,
               logs,
             },
-          }
-        );
+          })
+          .catch((err) => {
+            log.error(`[-] Failed to send Response ${err.message}`);
+          });
       } else {
         throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
       }
-      await this.workerSdk
-        .sendResponse(requestId, value.userAinAddress, {
-          data: {
-            ...result,
-            statusCode: 200,
-          },
-        })
-        .catch((err) => {
-          log.error(`[-] Failed to send Response ${err.message}`);
-        });
       log.debug(`[-] Success! requestId: ${requestId}`);
     } catch (error) {
       log.error(`[-] Failed! requestId: ${requestId} - ${error}`);
