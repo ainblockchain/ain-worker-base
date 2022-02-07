@@ -84,6 +84,14 @@ export default class WorkerBase {
         );
         if (sortedRequestsByCreatedAt.length !== 0) {
           const [requestId, value] = sortedRequestsByCreatedAt[0];
+          const userAddress = value.userAinAddress;
+          const isHandledRequest = await this.workerSdk.removeHandledRequest(
+            requestId,
+            userAddress
+          );
+          if (isHandledRequest) {
+            return;
+          }
           await this.requestHandler(requestId, value);
         }
       }
