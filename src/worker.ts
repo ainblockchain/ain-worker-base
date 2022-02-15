@@ -84,6 +84,14 @@ export default class WorkerBase {
         );
         if (sortedRequestsByCreatedAt.length !== 0) {
           const [requestId, value] = sortedRequestsByCreatedAt[0];
+          const userAddress = value.userAinAddress;
+          const isHandledRequest = await this.workerSdk.removeHandledRequest(
+            requestId,
+            userAddress
+          );
+          if (isHandledRequest) {
+            return;
+          }
           await this.requestHandler(requestId, value);
         }
       }
@@ -255,10 +263,10 @@ export default class WorkerBase {
         return JSON.parse(String(data));
       } catch (err) {
         log.error(`Failed to Write Log - requestId: ${requestId}`);
-        return {};
+        return null;
       }
     }
-    return {};
+    return null;
   }
 
   private async requestHandler(
@@ -282,32 +290,32 @@ export default class WorkerBase {
           requestId,
           this.storageSdk
         );
+        await this.workerSdk
+          .sendResponse(requestId, value.userAinAddress, {
+            data: {
+              ...result,
+              statusCode: 200,
+            },
+          })
+          .catch((err) => {
+            log.error(`[-] Failed to send Response ${err.message}`);
+          });
       } else if (requestType === "deleteContainer") {
         result = await JobDocker.deleteContainer(params, userAinAddress);
         const logs = await this.getLogForContainer(result.createRequestId);
-        await this.workerSdk.sendResponse(
-          result.createRequestId,
-          value.userAinAddress,
-          {
+        await this.workerSdk
+          .sendResponse(requestId, value.userAinAddress, {
             data: {
               ...result,
               logs,
             },
-          }
-        );
+          })
+          .catch((err) => {
+            log.error(`[-] Failed to send Response ${err.message}`);
+          });
       } else {
         throw new CustomError(ErrorCode.NOT_EXIST, "Function Not Exist");
       }
-      await this.workerSdk
-        .sendResponse(requestId, value.userAinAddress, {
-          data: {
-            ...result,
-            statusCode: 200,
-          },
-        })
-        .catch((err) => {
-          log.error(`[-] Failed to send Response ${err.message}`);
-        });
       log.debug(`[-] Success! requestId: ${requestId}`);
     } catch (error) {
       log.error(`[-] Failed! requestId: ${requestId} - ${error}`);

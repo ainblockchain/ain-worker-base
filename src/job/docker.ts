@@ -123,6 +123,11 @@ async function createContainer(
     },
     binds: [`${rootPath}:${constants.CONTAINER_ROOT_PATH}`],
   });
+  if (Object.keys(result.publishPorts).length === 0) {
+    return {
+      containerId,
+    };
+  }
 
   const endpoint = {};
   Object.entries(result.publishPorts).forEach(
