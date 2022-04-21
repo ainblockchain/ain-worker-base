@@ -605,36 +605,34 @@ export default class WorkerBase {
 
   protected writePodStatus = async (data: types.PodInfo) => {
     const phase = this.convertStatus(data);
-    if (phase !== 'createContainer') {
-      let condition;
-      if (data.status.containerStatuses && data.status.containerStatuses[0].state?.waiting) {
-        const waitingInfo = data.status.containerStatuses[0].state?.waiting;
-        condition = {
-          type: 'ContainersReady' as 'ContainersReady',
-          status: false,
-          reason: waitingInfo.reason,
-          message: waitingInfo.message,
-        };
-      }
-      log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
-      try {
-        await this.connectSdk.setPodStatus({
-          clusterName: this.workerInfo.clusterName,
-          containerId: data.appName,
-          podId: data.name,
-          podStatus: {
-            podName: data.name,
-            namespaceId: data.namespaceId,
-            status: {
-              phase,
-              condition,
-            },
-            image: data.image,
+    let condition;
+    if (data.status.containerStatuses && data.status.containerStatuses[0].state?.waiting) {
+      const waitingInfo = data.status.containerStatuses[0].state?.waiting;
+      condition = {
+        type: 'ContainersReady' as 'ContainersReady',
+        status: false,
+        reason: waitingInfo.reason,
+        message: waitingInfo.message,
+      };
+    }
+    log.debug(`[+] setPodStatus podName: ${data.appName}, phase:${phase}`);
+    try {
+      await this.connectSdk.setPodStatus({
+        clusterName: this.workerInfo.clusterName,
+        containerId: data.appName,
+        podId: data.name,
+        podStatus: {
+          podName: data.name,
+          namespaceId: data.namespaceId,
+          status: {
+            phase,
+            condition,
           },
-        });
-      } catch (err) {
-        log.error(`[-] Failed to set pod status - ${err}`);
-      }
+          image: data.image,
+        },
+      });
+    } catch (err) {
+      log.error(`[-] Failed to set pod status - ${err}`);
     }
     if (!this.connectContainerInfo) this.connectContainerInfo = {};
     if (!this.connectContainerInfo[data.appName]) this.connectContainerInfo[data.appName] = {};

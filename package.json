@@ -1,6 +1,6 @@
 {
   "name": "@aindev/ain-worker-base",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "AIN Connect Worker Base",
   "keywords": [
     "ainetwork",
