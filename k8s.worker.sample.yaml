@@ -51,6 +51,6 @@ spec:
         - name: MNEMONIC
           value: {{{ MNEMONIC }}}
         - name: GATEWAY_NAME
-          value: {{{ MNEMONIC }}}
+          value: {{{ GATEWAY_NAME }}}
         - name: NODE_ENV
           value: {{{ NODE_ENV('staging' or 'prod') }}}
