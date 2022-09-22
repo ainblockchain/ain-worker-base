@@ -665,20 +665,28 @@ export default class WorkerBase {
    * It is CallBack Function for Watching Pod Information [DELETE].
   */
   protected podDeleteCallback = async (data: types.PodInfo) => {
-    log.debug(`[+] podDeleteCallback podName: ${data.appName}, status:${data.status}`);
+    log.debug(`[+] podDeleteCallback podName: ${data.appName}, status:${data.status.phase}`);
     // Only information generated through API is removed in redis.
     if (data.labels && data.labels.ainConnect) {
       if (data.labels && data.labels.nfs) {
-        await this.connectSdk.deleteStorageStatus(
-          this.workerInfo.clusterName, data.appName,
-        );
+        try {
+          await this.connectSdk.deleteStorageStatus(
+            this.workerInfo.clusterName, data.appName,
+          );
+        } catch (err) {
+          log.error(`[-] Failed to delete Storage ${err.message}`);
+        }
       } else {
-        await this.connectSdk.deletePodStatus(
-          this.workerInfo.clusterName, data.appName,
-          data.name,
-        );
-        if (this.connectContainerInfo && this.connectContainerInfo[data.appName][data.name]) {
-          delete this.connectContainerInfo[data.appName][data.name];
+        try {
+          await this.connectSdk.deletePodStatus(
+            this.workerInfo.clusterName, data.appName,
+            data.name,
+          );
+          if (this.connectContainerInfo && this.connectContainerInfo[data.appName][data.name]) {
+            delete this.connectContainerInfo[data.appName][data.name];
+          }
+        } catch (err) {
+          log.error(`[-] Failed to delete NodeInfo ${err.message}`);
         }
       }
     }
