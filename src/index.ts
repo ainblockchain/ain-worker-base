@@ -52,7 +52,7 @@ program.command('serve').action(async () => {
       await worker.startForK8s();
     }
   } catch (err) {
-    log.error(`[-] Failed to start Worker - ${err.message}`);
+    log.error(`[-] Failed to start Worker - ${JSON.stringify(err)}`);
   }
 });
 

@@ -4,6 +4,9 @@ import * as request from 'request';
 import * as http2 from 'http2';
 import * as util from 'util';
 import * as types from '../../common/types';
+import Logger from '../../common/logger';
+
+const log = Logger.createLogger('util.k8s.api');
 
 const exec = util.promisify(require('child_process').exec);
 
@@ -754,6 +757,10 @@ export default class Api {
         const url = new URL(opts.uri);
         const host = `${url.protocol}//${url.host}`;
         const http2ClientSession = http2.connect(host, { ca: connectionOptions['ca'] });
+        http2ClientSession.on('error', (error) => {
+          log.error(`[-] http2ClientSession error - ${JSON.stringify(error)}`);
+        });
+
         let path = '/api/v1/pods?watch=true';
         if (opts && opts.qs && opts.qs.resourceVersion) {
           path += `&resourceVersion=${opts.qs.resourceVersion}`;
@@ -786,6 +793,7 @@ export default class Api {
         }, 5000);
 
         http2Stream.on('end', () => {
+          log.info('[+] http2Stream ended');
           clearInterval(pingInterval);
           http2ClientSession.close();
           this.informer.off('error', errorHandler);
@@ -793,6 +801,10 @@ export default class Api {
           this.informer.off('update', updateHandler);
           this.informer.off('delete', deleteHandler);
           this.informer.stop();
+        });
+
+        http2Stream.on('error', (error) => {
+          log.error(`[-] http2Stream error - ${JSON.stringify(error)}`);
         });
         return http2Stream;
       },

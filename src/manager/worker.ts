@@ -650,10 +650,10 @@ export default class WorkerBase {
   /**
    * It is CallBack Function for Watching Pod Information [UPDATE, ADDED].
   */
-  protected podUpdataOrAddCallback = async (data: types.PodInfo) => {
+  protected podUpdateOrAddCallback = async (data: types.PodInfo) => {
     try {
       if (data.labels && data.labels.ainConnect) {
-        log.debug(`[+] podUpdataOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
+        log.debug(`[+] podUpdateOrAddCallback podName: ${data.appName}, status:${data.status.phase}`);
         await this.writePodStatus(data);
       }
     } catch (err) {
@@ -689,11 +689,11 @@ export default class WorkerBase {
   */
   protected watchPodInfos() {
     this.k8sApi.makeInformerPod(
-      this.podUpdataOrAddCallback, // ADDED
-      this.podUpdataOrAddCallback, // UPDATE
+      this.podUpdateOrAddCallback, // ADDED
+      this.podUpdateOrAddCallback, // UPDATE
       this.podDeleteCallback, // DELETE
       async () => { // ERROR
-        log.debug('[+] watchPodInfos Error');
+        log.error('[-] watchPodInfos Error');
         // Remove Pod Information on Redis for sync.
         await this.initPodInfo();
       },
