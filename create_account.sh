@@ -5,12 +5,22 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: worker-account
+  namespace: default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: worker-account-token
+  namespace: default
+  annotations:
+    kubernetes.io/service-account.name: worker-account
+type: kubernetes.io/service-account-token
 " > service_account.yaml
 kubectl create -f service_account.yaml
 rm service_account.yaml
 
-secrets=$(kubectl get ServiceAccount worker-account  -o jsonpath='{.secrets[0].name}')
-token=$(kubectl get secrets ${secrets} -o jsonpath='{.data.token}' | base64 --decode)
+#secrets=$(kubectl get ServiceAccount worker-account  -o jsonpath='{.secrets[0].name}')
+token=$(kubectl get secrets worker-account-token -o jsonpath='{.data.token}' -n default | base64 --decode)
 cluster_name=$(kubectl config current-context)
 echo $cluster_name
 certificate=$(kubectl config view --flatten -o jsonpath="{.clusters[?(@.name == '$cluster_name')].cluster.certificate-authority-data}")
