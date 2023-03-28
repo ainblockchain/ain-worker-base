@@ -185,7 +185,7 @@ export default class Template {
     endpoint: string, gateway: string, port: number, labels?: {[key: string]: string },
   ) {
     const templateJson = {
-      apiVersion: 'networking.istio.io/v1alpha3',
+      apiVersion: 'networking.istio.io/v1beta1',
       kind: 'VirtualService',
       metadata: {
         name,

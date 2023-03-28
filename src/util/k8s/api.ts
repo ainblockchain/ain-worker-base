@@ -182,7 +182,7 @@ export default class Api {
       },
       ...opts,
     };
-    const url = `${this.config.getCurrentCluster()!.server}/apis/networking.istio.io/v1alpha3/namespaces/${namespace}/virtualservices`;
+    const url = `${this.config.getCurrentCluster()!.server}/apis/networking.istio.io/v1beta1/namespaces/${namespace}/virtualservices`;
 
     return new Promise((resolve, reject) => {
       request.delete(url, opts,
@@ -239,7 +239,7 @@ export default class Api {
     const opts = {} as request.Options;
     this.config.applyToRequest(opts);
 
-    const url = `${this.config.getCurrentCluster()!.server}/apis/networking.istio.io/v1alpha3/namespaces/${namespace}/gateways/${name}`;
+    const url = `${this.config.getCurrentCluster()!.server}/apis/networking.istio.io/v1beta1/namespaces/${namespace}/gateways/${name}`;
 
     return new Promise<string[]>((resolve, reject) => {
       request.get(url, opts,
